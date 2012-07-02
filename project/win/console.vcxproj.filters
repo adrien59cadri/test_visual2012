@@ -5,9 +5,21 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="vstsdk">
+      <UniqueIdentifier>{68d72f98-6a49-420f-a25e-f37acec3ed31}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\main.cpp">
+    <ClCompile Include="..\..\vstsdk2.4\public.sdk\source\vst2.x\audioeffectx.cpp">
+      <Filter>vstsdk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\vstsdk2.4\public.sdk\source\vst2.x\vstplugmain.cpp">
+      <Filter>vstsdk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\vstsdk2.4\public.sdk\source\vst2.x\audioeffect.cpp">
+      <Filter>vstsdk</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\VstPlugIn.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -15,5 +27,22 @@
     <ClInclude Include="..\..\src\avx.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\vstsdk2.4\public.sdk\source\vst2.x\audioeffect.h">
+      <Filter>vstsdk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\vstsdk2.4\public.sdk\source\vst2.x\audioeffectx.h">
+      <Filter>vstsdk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\vstsdk2.4\public.sdk\source\vst2.x\aeffeditor.h">
+      <Filter>vstsdk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\VstPlugIn.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="vst.def">
+      <Filter>src</Filter>
+    </None>
   </ItemGroup>
 </Project>
