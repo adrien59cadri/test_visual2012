@@ -6,7 +6,7 @@
     <OutDir>$(SolutionDir)..\..\build\$(Configuration)$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup>
-    <IntDir>$(OutDir)$ProjectName)\</IntDir>
+    <IntDir>$(OutDir)$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

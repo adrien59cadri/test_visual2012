@@ -105,7 +105,7 @@ void VstPlugIn::getParameterLabel (VstInt32 index, char* label)
 //------------------------------------------------------------------------
 bool VstPlugIn::getEffectName (char* name)
 {
-	vst_strncpy (name, "test", kVstMaxEffectNameLen);
+	vst_strncpy (name, "myplug", kVstMaxEffectNameLen);
 	return true;
 }
 
