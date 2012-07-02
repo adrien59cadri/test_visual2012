@@ -1,0 +1,3 @@
+LIBRARY Vstplugin
+DESCRIPTION 'Test vst plugin'
+EXPORT VSTPluginMain
