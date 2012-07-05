@@ -8,6 +8,9 @@
     <Filter Include="vstsdk">
       <UniqueIdentifier>{68d72f98-6a49-420f-a25e-f37acec3ed31}</UniqueIdentifier>
     </Filter>
+    <Filter Include="fftw3">
+      <UniqueIdentifier>{2ad7ff55-fb7c-42ea-ab6f-252177647cf5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\vstsdk2.4\public.sdk\source\vst2.x\audioeffectx.cpp">
@@ -39,10 +42,16 @@
     <ClInclude Include="..\..\src\VstPlugIn.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\PerfCounter.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\fftw3_32\fftw3.h">
+      <Filter>fftw3</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="vst.def">
-      <Filter>src</Filter>
-    </None>
+    <Library Include="..\..\fftw3_32\libfftw3-3.lib">
+      <Filter>fftw3</Filter>
+    </Library>
   </ItemGroup>
 </Project>

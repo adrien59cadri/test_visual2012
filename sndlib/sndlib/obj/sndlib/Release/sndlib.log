@@ -1,0 +1,50 @@
+﻿Build started 7/5/2012 3:12:52 PM.
+     1>Project "C:\Users\Adrien\Documents\GitHub\test_visual2012\sndfile\sndlib\sndlib.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating "obj/sndlib/Release\sndlib.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       PreBuildEvent:
+         copy "C:\Users\Adrien\Documents\GitHub\test_visual2012\sndfile\sndlib\windows-mus-config.h" "C:\Users\Adrien\Documents\GitHub\test_visual2012\sndfile\sndlib\mus-config.h"
+         copy "C:\Users\Adrien\Documents\GitHub\test_visual2012\sndfile\sndlib\windows-sndlib.h" "C:\Users\Adrien\Documents\GitHub\test_visual2012\sndfile\sndlib\sndlib.h"
+         
+         :VCEnd
+                 1 fichier(s) copié(s).
+                 1 fichier(s) copié(s).
+       ClCompile:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /I./ /nologo /W1 /WX- /MP /Ox /Oy- /D _MBCS /GF /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"obj/sndlib/Release\\" /Fd"obj/sndlib/Release\vc100.pdb" /Gd /TC /analyze- /errorReport:prompt audio.c clm.c clm2xen.c headers.c io.c run.c s7.c sndlib2xen.c sound.c vct.c xen.c
+         audio.c
+         clm.c
+         clm2xen.c
+         headers.c
+         io.c
+         run.c
+         s7.c
+         sndlib2xen.c
+     1>run.c(369): warning C4090: 'function' : different 'const' qualifiers
+         sound.c
+     1>audio.c(2827): warning C4047: 'function' : 'DWORD_PTR' differs in levels of indirection from 'DWORD (__cdecl *)(HWAVEOUT,UINT,DWORD,DWORD,DWORD)'
+     1>audio.c(2827): warning C4024: 'waveOutOpen' : different types for formal and actual parameter 4
+     1>audio.c(3140): warning C4047: 'function' : 'DWORD_PTR' differs in levels of indirection from 'DWORD (__cdecl *)(HWAVEIN,UINT,DWORD,DWORD,DWORD)'
+     1>audio.c(3140): warning C4024: 'waveInOpen' : different types for formal and actual parameter 4
+         vct.c
+         xen.c
+       Lib:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\Lib.exe /OUT:".\sndlib.lib" /NOLOGO obj/sndlib/Release\audio.obj
+         obj/sndlib/Release\clm.obj
+         obj/sndlib/Release\clm2xen.obj
+         obj/sndlib/Release\headers.obj
+         obj/sndlib/Release\io.obj
+         obj/sndlib/Release\run.obj
+         obj/sndlib/Release\s7.obj
+         obj/sndlib/Release\sndlib2xen.obj
+         obj/sndlib/Release\sound.obj
+         obj/sndlib/Release\vct.obj
+         obj/sndlib/Release\xen.obj
+         sndlib.vcxproj -> C:\Users\Adrien\Documents\GitHub\test_visual2012\sndfile\sndlib\.\sndlib.lib
+       FinalizeBuildStatus:
+         Deleting file "obj/sndlib/Release\sndlib.unsuccessfulbuild".
+         Touching "obj/sndlib/Release\sndlib.lastbuildstate".
+     1>Done Building Project "C:\Users\Adrien\Documents\GitHub\test_visual2012\sndfile\sndlib\sndlib.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:18.72

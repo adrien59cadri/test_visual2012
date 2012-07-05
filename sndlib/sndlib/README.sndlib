@@ -1,0 +1,127 @@
+	S N D L I B
+
+The sound library is a collection of sound file and audio hardware
+handlers written in C, Forth, Scheme, Common Lisp, and Ruby, and
+running currently on SGI, Sun, Linux, Mac, *BSD, Mac OSX,
+and Windoze systems (but I'm not making any effort to keep the Windoze
+code going). It provides relatively straightforward access to many
+sound file headers and data types, and most of the features of the
+audio hardware.
+
+Documentation is in sndlib.html.
+
+To build it
+
+./configure
+make
+make install
+
+The configure script takes several arguments:
+
+   --with-alsa               use ALSA if possible
+   --with-static-alsa        use ALSA statically loaded (for RPM generation)
+   --with-float-samples      represent samples internally as floats 
+   --with-sample-width=N     use N bits of samples (default = 24)
+   --with-forth              use Forth as the extension language
+   --with-ruby               use Ruby as the extension language
+   --with-ruby-prefix        set prefix for ruby.h
+   --with-static-gsl         try to statically load GSL
+
+Sndlib's internal representation of sample values can be either an
+integer with the fixed point at any place, or a double.  The default
+is double.
+
+Many examples and more documentation can be found in the Snd
+package (ccrma-ftp.stanford.edu:/pub/Lisp/snd-12.tar.gz), and
+CLM (clm-4.tar.gz).
+
+
+There are two packages included with sndlib, both written
+by Michael Scholz: sndins (a faster Scheme/Ruby connection to
+some instruments) and gfm (a Forth implementation of sndlib).
+
+
+--------------------------------------------------------------------------------
+from Rick Taube:
+
+BUILDING SNDLIB AND CM FROM SOURCES ON WINDOWS 
+
+These instructions assume you already have Microsoft Visual Studio   
+Express C++ 2008 installed on your computer. Its easiest if you create   
+a common folder to hold the source trees for CM and SndLib.  I created   
+a C:\Software directory to hold both systems on my machine: 
+
+        C:\Software\sndlib 
+        C:\Software\cm 
+
+BUILDING SNDLIB ON WINDOWS 
+
+1. Download and install the latest version of SndLib: 
+
+        ftp://ccrma-ftp.stanford.edu/pub/Lisp/sndlib.tar.gz 
+
+2. Double-click 'sndlib.vcproj' to open the project in Visual Studio
+and choose 'Build Solution' from the Build menu (or press F7). This
+should compile the release version of the sndlib library.
+
+BUILDING CM ON WINDOW 
+
+1. Download and install Premake 3.7, make sure that the executable is   
+on your PATH variable: 
+
+        http://downloads.sourceforge.net/premake/premake-win32-3.7.zip 
+
+2. Open a CMD shell (terminal): Select Run... from the Start menu and   
+click OK. 
+
+3. In the terminal window, change directories to your CM directory and   
+use premake to create the Visual Studio project files: 
+
+    cd \Software\cm 
+    premake --target vs2008 --sndlib ../sndlib 
+
+4. Double click the file 'cm.sln' , select the Release configuration   
+in the pulldown menu and press F7. 
+
+
+
+BUILDING SNDLIB AND CM FROM SOURCES ON OSX AND LINUX 
+
+These instructions assume you already have all c++ developer tools,   
+libraries and headers installed on your machine.  Its easiest if you   
+create  a common folder to hold the source trees for CM and SndLib.  I   
+created a  ~/Software directory to hold both systems on my machine: 
+
+        ~/Software/sndlib 
+        ~/Software/cm 
+
+BUILDING SNDLIB ON OSX/LINUX 
+
+1. Download, install and make the latest version of SndLib: 
+
+    $ cd ~/Software 
+    $ wget  ftp://ccrma-ftp.stanford.edu/pub/Lisp/sndlib.tar.gz 
+    $ tar -zxf sndlib.tar.gz 
+    $ cd sndlib 
+    $ ./configure CC=g++ 
+    $ make 
+
+BUILDING CM ON OS X/LINUX 
+
+1. Download and install Premake 3.7, make sure that the executable is 
+on your PATH variable: 
+
+    os x:  http://downloads.sourceforge.net/premake/premake-macosx-3.7.tar.gz 
+    linux: http://downloads.sourceforge.net/premake/premake-linux-3.7.tar.gz 
+
+2. Download and build the latest CM3 sources from Sourceforge. 
+
+    $ cd ~/Software 
+    $ svn co http://commonmusic.svn.sourceforge.net/svnroot/commonmusic/trunk 
+ cm 
+    $ cd cm 
+    $ premake --target gnu --sndlib ../sndlib 
+    $ make 
+
+The applications will be saved in the bin/ subdirectory. Documentation   
+and examples are in cm/res/doc. See cm/readme.text for more information. 

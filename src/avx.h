@@ -39,7 +39,13 @@ void foo(){
 
 
 	auto t0 = getHighResolutionTimeCounter();
-
+    
+	for(auto i=0;i<len;i++)
+	{
+		resfloat[i] = v1float[i]+v2float[i];
+	}
+    
+	auto t1 = getHighResolutionTimeCounter();
 	for(auto i=0;i<len/4;i++)
 	{
 		ressse2[i] = _mm_add_ps(v1sse2[i],v2sse2[i]);
@@ -47,20 +53,18 @@ void foo(){
 
 	
 	
-	auto t1 = getHighResolutionTimeCounter();
+	auto t2 = getHighResolutionTimeCounter();
+ //   BOOL WINAPI IsProcessorFeaturePresent();
+
 	//for(auto i=0;i<len/8;i++)
 	//{
 
-		//si avx dispo
-		//resavx[i] = _mm256_add_ps(v1avx[i],v2avx[i]);
+	//	//si avx dispo
+	//	resavx[i] = _mm256_add_ps(v1avx[i],v2avx[i]);
 	//}
-	for(auto i=0;i<len;i++)
-	{
-		resfloat[i] = v1float[i]+v2float[i];
-	}
-	
-	auto t2 = getHighResolutionTimeCounter();
-	std::cout<<"time sse : "<<getTime(t1-t0)<<"time avx : "<<getTime(t2-t1)<<std::endl;
+	//
+	//auto t3 = getHighResolutionTimeCounter();
+	std::cout<<"time float : "<<getTime(t1-t0)<<"time sse2 : "<<getTime(t2-t1)/*<<"time avx : "<<getTime(t3-t2)*/<<std::endl;
 
 	_mm_free(ressse2);
 	_mm_free(v1sse2);

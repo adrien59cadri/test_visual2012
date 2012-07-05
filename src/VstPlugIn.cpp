@@ -2,6 +2,52 @@
 #include <assert.h>
 #include <string>
 
+
+#include <fftw3.h>
+
+void process_fft(double *in, fftw_complex *out, int framesnb)
+{
+
+
+
+    fftw_complex *intmp, *outtmp;
+    fftw_plan p;
+         
+    intmp = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * framesnb);
+    outtmp = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * framesnb);
+    p = fftw_plan_dft_1d(framesnb, intmp, outtmp, FFTW_FORWARD, FFTW_ESTIMATE);
+         
+    for(int i=0;i<framesnb;i++)
+        intmp[i][0] = in[i];
+
+    fftw_execute(p); /* repeat as needed */
+         
+    memcpy(out,outtmp,sizeof(fftw_complex) * framesnb);
+
+    fftw_destroy_plan(p);
+    fftw_free(in); fftw_free(out);
+}
+
+void process_fft(float *in, float **out, int framesnb)
+{
+    
+    double *ind = new double[framesnb];
+    fftw_complex*outd = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * framesnb);
+
+    
+    for(int i=0;i<framesnb;i++)
+        ind[i]= in[i];
+
+    process_fft(ind, outd, framesnb);
+
+    
+    for(int i=0;i<framesnb;i++)
+    {
+        out[0][i]= outd[i][0];
+        out[1][i]= outd[i][1];
+    }
+}
+
 AudioEffect* createEffectInstance (audioMasterCallback audioMaster){
 	VstPlugIn * ptr = new VstPlugIn(audioMaster);
 	return ptr;
@@ -11,10 +57,10 @@ AudioEffect* createEffectInstance (audioMasterCallback audioMaster){
 
 void VstPlugIn::processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames)  ///< Process 32 bit (single precision) floats (always in a resume state)
 {
-	for (auto i = 0; i < sampleFrames;i++)
-	{
-		
-	}
+	//for (auto i = 0; i < sampleFrames;i++)
+	//{
+	//	process_fft(*inputs,outputs,sampleFrames);
+	//}
 }
 
 VstPlugIn::VstPlugIn (audioMasterCallback audioMaster)
@@ -112,14 +158,14 @@ bool VstPlugIn::getEffectName (char* name)
 //------------------------------------------------------------------------
 bool VstPlugIn::getProductString (char* text)
 {
-	vst_strncpy (text, "Gain", kVstMaxProductStrLen);
+	vst_strncpy (text, "fx", kVstMaxProductStrLen);
 	return true;
 }
 
 //------------------------------------------------------------------------
 bool VstPlugIn::getVendorString (char* text)
 {
-	vst_strncpy (text, "Steinberg Media Technologies", kVstMaxVendorStrLen);
+	vst_strncpy (text, "Dzada", kVstMaxVendorStrLen);
 	return true;
 }
 
