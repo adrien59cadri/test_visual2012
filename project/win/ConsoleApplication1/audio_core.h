@@ -58,8 +58,10 @@ public:
 	id get_id();
 	unsigned buffer_size();
 	std::chrono::nanoseconds period();
-	bool usable(){return id()!=get_id();}
+	bool initializable(){return id()!=get_id();}
 	void initialize();
+	void start();
+	void stop();
 	bool is_active(){return mActive;}
 	void activate();
 	bool is_initialized()const {return pDeviceHandle!=nullptr && pAudioClient!=nullptr;}

@@ -173,7 +173,7 @@ namespace windows_helper{
     }
 	
 	void audio_device::initialize(){
-		if(pDeviceHandle==nullptr)
+		if(!initializable())
 			return;
 
 		const IID IID_IAudioClient = __uuidof(IAudioClient);
@@ -215,6 +215,28 @@ namespace windows_helper{
 			
 		}
 		return std::chrono::nanoseconds(default_period*100);
+	}
+	void audio_device::start(){
+		if(!is_active())
+			return ;
+		HRESULT hr = pAudioClient->Start();
+		if(hr!=ERROR_SUCCESS)
+		{
+			windows_helper::getLastErrorMessage();
+			
+		}
+		return ;
+	}
+	void audio_device::stop(){
+		if(!is_active())
+			return ;
+		HRESULT hr = pAudioClient->Stop();
+		if(hr!=ERROR_SUCCESS)
+		{
+			windows_helper::getLastErrorMessage();
+			
+		}
+		return ;
 	}
 	audio_device::id audio_device::get_id(){
 		if(pDeviceHandle==nullptr)
