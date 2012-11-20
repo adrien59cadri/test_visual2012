@@ -3,11 +3,11 @@
 
 int main(int argc, char* argv[])
 {
-    windows_helper::scanAudioEndpoints();
+//    windows_helper::scanAudioEndpoints();
 
-    audio_system as;
-    for(int i=0;i<as.count();i++)
-        std::cout<<as.getDeviceInfoAt(i).mName.data()<<std::endl;
+    audio_device_collection collection;
+	for(auto it=collection.begin();it!=collection.end();it++)
+		std::wcout<<it->get_id()<<std::endl;
 	return 0;
 }
 
