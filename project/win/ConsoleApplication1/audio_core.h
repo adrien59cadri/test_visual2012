@@ -13,7 +13,7 @@
 
 #include <iostream>
 #include <vector>
-
+#include <chrono>
 
 namespace windows_helper{
     bool scanAudioEndpoints();
@@ -45,24 +45,29 @@ public:
 			return out<<id.data();	
 		} 
 	};
-	audio_device(native_handle_type handle=nullptr):pAudioClient(nullptr),pFormat(nullptr),pDeviceHandle(handle){}
-	audio_device(audio_device && d):pAudioClient(nullptr),pFormat(nullptr),pDeviceHandle(nullptr){
+	audio_device(native_handle_type handle=nullptr):pAudioClient(nullptr),mActive(false),pFormat(nullptr),pDeviceHandle(handle){}
+	audio_device(audio_device && d):pAudioClient(nullptr),pFormat(nullptr),mActive(false),pDeviceHandle(nullptr){
 		std::swap(pDeviceHandle,d.pDeviceHandle);
 		std::swap(pAudioClient,d.pAudioClient);
 		std::swap(pFormat,d.pFormat);
+		std::swap(mActive,d.mActive);
 	}
 	~audio_device();
 	native_handle_type native_handle() const{return pDeviceHandle;}
 	//! reurn the id of the audio device if initialized, or defaut if not
 	id get_id();
 	unsigned buffer_size();
+	std::chrono::nanoseconds period();
 	bool usable(){return id()!=get_id();}
 	void initialize();
-	bool is_initialized()const {return pDeviceHandle!=nullptr && pAudioClient!=nullptr && pFormat!=nullptr;}
+	bool is_active(){return mActive;}
+	void activate();
+	bool is_initialized()const {return pDeviceHandle!=nullptr && pAudioClient!=nullptr;}
 private:
 	audio_device(const audio_device&);
 	native_handle_type pDeviceHandle;
 	IAudioClient * pAudioClient;
+	bool mActive;
 	WAVEFORMATEX * pFormat;
 };
 

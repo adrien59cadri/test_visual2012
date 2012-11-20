@@ -13,9 +13,6 @@
 #endif
 
 
-#include <iostream>
-#include <vector>
-
 
 namespace windows_helper{
 #define WIN_SAFE_RELEASE(punk){ \
@@ -187,22 +184,37 @@ namespace windows_helper{
 			windows_helper::getLastErrorMessage();
 		}
 		hr = pAudioClient->GetMixFormat(&pFormat);
-		if(hr!=ERROR_SUCCESS || pFormat != nullptr)
+		if(hr!=ERROR_SUCCESS|| pFormat == nullptr)
 		{
 			windows_helper::getLastErrorMessage();
 		}
 
 	}
 	unsigned audio_device::buffer_size(){
-		if(!is_initialized())
+		if(!is_active())
 			return 0;
 		unsigned buffersize = 0;
 		HRESULT hr = pAudioClient->GetBufferSize(&buffersize);
 		if(hr!=ERROR_SUCCESS)
 		{
 			windows_helper::getLastErrorMessage();
+			
+
 		}
 		return buffersize;
+	}
+	std::chrono::nanoseconds audio_device::period(){
+		if(!is_active())
+			return std::chrono::nanoseconds(0);
+		REFERENCE_TIME default_period = 0;
+		REFERENCE_TIME min_period = 0;
+		HRESULT hr = pAudioClient->GetDevicePeriod(&default_period, &min_period);
+		if(hr!=ERROR_SUCCESS)
+		{
+			windows_helper::getLastErrorMessage();
+			
+		}
+		return std::chrono::nanoseconds(default_period*100);
 	}
 	audio_device::id audio_device::get_id(){
 		if(pDeviceHandle==nullptr)
@@ -241,4 +253,27 @@ namespace windows_helper{
 		WIN_SAFE_RELEASE(pAudioClient);
 		CoTaskMemFree(pFormat);
 		WIN_SAFE_RELEASE(pDeviceHandle);
+	}
+
+	void audio_device::activate(){
+		if(is_active())
+			return;
+		if(!is_initialized())
+			return;
+		LPCGUID audio_session_guid = nullptr;
+		REFERENCE_TIME minimum_100_ns = 10;//1ms
+		HRESULT hr=pAudioClient->Initialize(
+			AUDCLNT_SHAREMODE_SHARED,//chose shared mode or exclusive to have exclusive access to the endpoint
+			0,//stream flags
+			minimum_100_ns,//buffer requested to the endpoint in exclusive mode, or to the audio engine in shared
+			0,//because in shared mode, in exclusive this sets the periodicity for the endpoint
+			pFormat,
+			audio_session_guid//set to null this ptr indicates that we don't want wasapi to use session info
+			//sessions
+			//http://msdn.microsoft.com/en-us/library/windows/desktop/dd370796(v=vs.85).aspx
+			);
+		if(hr!=ERROR_SUCCESS){
+			windows_helper::getLastErrorMessage();
+		}
+		mActive =true;
 	}
