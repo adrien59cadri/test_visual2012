@@ -14,6 +14,7 @@
 
 
 
+
 namespace windows_helper{
 #define WIN_SAFE_RELEASE(punk){ \
     if((punk)!=nullptr){(punk)->Release();(punk) = nullptr; }}
@@ -194,12 +195,13 @@ namespace windows_helper{
         if(!initializable())
             return false;
         mFormat = format;
+		
+		AUDCLNT_SHAREMODE mode  = AUDCLNT_SHAREMODE_SHARED;
 
         //fill format ?
 
 
-        WAVEFORMATEX * pFormat;
-
+        
 
         const IID IID_IAudioClient = __uuidof(IAudioClient);
 
@@ -208,29 +210,125 @@ namespace windows_helper{
         {
             windows_helper::getLastErrorMessage();
         }
-        hr = pAudioClient->GetMixFormat(&pFormat);
-        if(hr!=ERROR_SUCCESS|| pFormat == nullptr)
+
+//what is this for?
+		WAVEFORMATEX  *pmixerformat = nullptr;
+
+        hr = pAudioClient->GetMixFormat(&pmixerformat);
+
+		if(hr!=S_OK|| pmixerformat == nullptr)
         {
             windows_helper::getLastErrorMessage();
         }
-        
+
+
+		CoTaskMemFree(pmixerformat);
+		//end
+
+		WAVEFORMATEX requestedformat ;
+		//memcpy(&requestedformat,pmixerformat,sizeof(requestedformat));
+		
+		requestedformat.nChannels = format.mChannelCount;
+		requestedformat.nSamplesPerSec = (int)( format.mSampleRate);
+		requestedformat.wBitsPerSample = format.sample_size() * 8;
+		requestedformat.nAvgBytesPerSec = format.mChannelCount * format.sample_size() * format.mSampleRate;
+		requestedformat.wFormatTag=WAVE_FORMAT_PCM;
+		requestedformat.nBlockAlign=format.mChannelCount*format.sample_size();
+		requestedformat.cbSize=0;//ignored because WAVE_FORMAT_PCM
+		
+		WAVEFORMATEX * pacceptedformat = nullptr;
+		WAVEFORMATEX * pnearestformat = nullptr;//should perhaps be freed
+		WAVEFORMATEX**ppnearestformat = nullptr;
+		if(mode == AUDCLNT_SHAREMODE_EXCLUSIVE)
+		{
+			ppnearestformat = nullptr;
+
+		}else{
+			ppnearestformat = &pnearestformat;
+		}
+		hr = pAudioClient->IsFormatSupported(mode,&requestedformat,ppnearestformat);
+		if(hr == S_OK)
+		{
+			//format accepté
+			pacceptedformat  = &requestedformat;
+		}
+		else if(hr == S_FALSE)
+		{
+			//may happen only in shared mode as pnearest is null in exclusive
+			//ok, use pnearest
+			pacceptedformat = pnearestformat;
+		}
+		else if(hr==AUDCLNT_E_UNSUPPORTED_FORMAT)
+		{
+			//ok but requested format is unsupported in exclusive mode
+			if(mode == AUDCLNT_SHAREMODE_EXCLUSIVE)
+			{
+				//ouch, mode rejected ... no closest solution ...
+			}
+			mode = AUDCLNT_SHAREMODE_SHARED;
+			pacceptedformat = &requestedformat;
+		}else
+		{
+			//ouch here we failed
+			if(hr == AUDCLNT_E_DEVICE_INVALIDATED)
+			{
+				//device not valid anymore
+			}else if(hr==AUDCLNT_E_SERVICE_NOT_RUNNING)
+			{
+				//?
+			}else if(hr=E_INVALIDARG)
+			{
+				//mode is not shared and not exclusive
+			}else{
+				//invalid call
+				//pointers to struct are 0
+			}
+		}
+		
         LPCGUID audio_session_guid = nullptr;
         REFERENCE_TIME minimum_100_ns = 10;//1ms
         hr=pAudioClient->Initialize(
-            AUDCLNT_SHAREMODE_SHARED,//chose shared mode or exclusive to have exclusive access to the endpoint
+            mode,//chose shared mode or exclusive to have exclusive access to the endpoint
             0,//stream flags
             minimum_100_ns,//buffer requested to the endpoint in exclusive mode, or to the audio engine in shared
             0,//because in shared mode, in exclusive this sets the periodicity for the endpoint
-            pFormat,
+			pacceptedformat,//pointer to the filled valid format
             audio_session_guid//set to null this ptr indicates that we don't want wasapi to use session info
             //sessions
             //http://msdn.microsoft.com/en-us/library/windows/desktop/dd370796(v=vs.85).aspx
             );
-        if(hr!=ERROR_SUCCESS){
-            windows_helper::getLastErrorMessage();
+        if(hr!=S_OK){
+
+			switch(hr)
+			{
+			case AUDCLNT_E_ALREADY_INITIALIZED : break;
+			case AUDCLNT_E_WRONG_ENDPOINT_TYPE : break;
+			case AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED : break;
+			case AUDCLNT_E_BUFFER_SIZE_ERROR : break;
+			case AUDCLNT_E_CPUUSAGE_EXCEEDED : break;
+			case AUDCLNT_E_DEVICE_INVALIDATED : break;
+			case AUDCLNT_E_DEVICE_IN_USE : break;
+			case AUDCLNT_E_ENDPOINT_CREATE_FAILED : break;
+			case AUDCLNT_E_INVALID_DEVICE_PERIOD : break;
+			case AUDCLNT_E_UNSUPPORTED_FORMAT : break;
+			case AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED : break;
+			case AUDCLNT_E_BUFDURATION_PERIOD_NOT_EQUAL : break;//AUDCLNT_STREAMFLAGS_EVENTCALLBACK flag is set but parameters hnsBufferDuration and hnsPeriodicity are not equal.
+			case AUDCLNT_E_SERVICE_NOT_RUNNING : break;
+			case E_POINTER : break; //pformatisnull
+			case E_INVALIDARG : break;
+			case E_OUTOFMEMORY : break;
+			default :
+				//unknown
+				break;
+			}
+
+
+
+
         }
-        
-        CoTaskMemFree(pFormat);
+        if(pnearestformat!=nullptr)
+			CoTaskMemFree(pnearestformat);
+
         return true;
     }
     unsigned audio_device::buffer_size(){
@@ -238,7 +336,7 @@ namespace windows_helper{
             return 0;
         unsigned buffersize = 0;
         HRESULT hr = pAudioClient->GetBufferSize(&buffersize);
-        if(hr!=ERROR_SUCCESS)
+        if(hr!=S_OK)
         {
             windows_helper::getLastErrorMessage();
             
@@ -252,7 +350,7 @@ namespace windows_helper{
         REFERENCE_TIME default_period = 0;
         REFERENCE_TIME min_period = 0;
         HRESULT hr = pAudioClient->GetDevicePeriod(&default_period, &min_period);
-        if(hr!=ERROR_SUCCESS)
+        if(hr!=S_OK)
         {
             windows_helper::getLastErrorMessage();
             
@@ -316,7 +414,7 @@ void audio_device::internal_process(){
         std::this_thread::sleep_for(period_/2);
         // See how much buffer space is available.
         hr = pAudioClient->GetCurrentPadding(&numFramesPadding);
-        if(hr!=ERROR_SUCCESS)
+        if(hr!=S_OK)
         {
             windows_helper::getLastErrorMessage();
             
@@ -346,7 +444,7 @@ void audio_device::internal_process(){
 
 
     hr = pAudioClient->Stop();
-    if(hr!=ERROR_SUCCESS)
+	if(hr!=S_OK)
     {
         windows_helper::getLastErrorMessage();
             
@@ -364,33 +462,38 @@ void audio_device::internal_process(){
         // Get the endpoint ID string.
         LPWSTR  device_id=nullptr;
         HRESULT hr = pDeviceHandle->GetId(&device_id);
-        if(hr!=ERROR_SUCCESS || device_id == nullptr){
+        if(hr!=S_OK || device_id == nullptr){
             windows_helper::getLastErrorMessage();
         }
-   //         IPropertyStore *pProps=nullptr;
-   //         hr = pDevice->OpenPropertyStore(
-   //                           STGM_READ, &pProps);
-   //         if(hr!=ERROR_SUCCESS || pProps == nullptr){
-            //	windows_helper::getLastErrorMessage();
-   //         }
-
-   //         PROPVARIANT varName;
-   //         // Initialize container for property value.
-   //         PropVariantInit(&varName);
-
-   //         // Get the endpoint's friendly-name property.
-   //         hr = pProps->GetValue(PKEY_Device_FriendlyName, &varName);
-   //         if(hr!=ERROR_SUCCESS){
-            //	windows_helper::getLastErrorMessage();
-            //}
-        
-//            PropVariantClear(&varName);
- //           WIN_SAFE_RELEASE(pProps)
         return id( device_id);
         CoTaskMemFree(device_id);
 
     }
+	std::wstring audio_device::name(){
+		if(!initializable())
+			return std::wstring();
+		IPropertyStore *pProps=nullptr;
+		HRESULT hr = this->pDeviceHandle->OpenPropertyStore(
+                          STGM_READ, &pProps);
+		if(hr!=S_OK || pProps == nullptr)
+		{
+			windows_helper::getLastErrorMessage();
+		}
 
+        PROPVARIANT varName;
+        // Initialize container for property value.
+        PropVariantInit(&varName);
+
+        // Get the endpoint's friendly-name property.
+        hr = pProps->GetValue(
+                       PKEY_Device_FriendlyName, &varName);
+		if(hr!=S_OK && hr != INPLACE_S_TRUNCATED)
+		{
+			windows_helper::getLastErrorMessage();
+		}
+
+        return std::wstring(varName.pwszVal);
+	}
     audio_device::~audio_device(){
         WIN_SAFE_RELEASE(pAudioClient);
         WIN_SAFE_RELEASE(pDeviceHandle);

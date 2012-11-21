@@ -1,9 +1,8 @@
 #include "audio_core.h"
-
+static int count = 0;
 
 void process(audio_buffer &buff){
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::cout<<" 1 sec \n";
+        std::cout<<count++<<".";
 }
 
 
