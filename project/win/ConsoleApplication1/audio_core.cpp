@@ -172,24 +172,34 @@ namespace windows_helper{
         mInitialized = true;
     }
 
-    audio_device::audio_device(native_handle_type handle):pAudioClient(nullptr),mActive(false),pFormat(nullptr),pDeviceHandle(handle){}
-    audio_device::audio_device(audio_device && d):pAudioClient(nullptr),pFormat(nullptr),mActive(false),pDeviceHandle(nullptr){
+    audio_device::audio_device(native_handle_type handle):pAudioClient(nullptr),mActive(false),pDeviceHandle(handle){
+        mRunProcess.exchange(false);
+    }
+    audio_device::audio_device(audio_device && d):pAudioClient(nullptr),mActive(false),pDeviceHandle(nullptr){
         std::swap(pDeviceHandle,d.pDeviceHandle);
         std::swap(pAudioClient,d.pAudioClient);
-        std::swap(pFormat,d.pFormat);
+        std::swap(mFormat,d.mFormat);
         std::swap(mActive,d.mActive);
     }
     
     bool audio_device::initialize(){
-        audio_format<int16_t,bit_order::little> format;
+        audio_format format;
         format.mChannelCount = 2;
         format.mSampleRate = 44100.;
-        return initialize<decltype(format)>(format);
+        format.mBitOrder = bit_order::little;
+        format.mSampleDataType = audio_sample_data_type::eInt16;
+        return initialize(format);
     }
-    template<typename audio_format_t >
-    bool audio_device::initialize(const audio_format_t& format){
+    bool audio_device::initialize(const audio_format& format){
         if(!initializable())
             return false;
+        mFormat = format;
+
+        //fill format ?
+
+
+        WAVEFORMATEX * pFormat;
+
 
         const IID IID_IAudioClient = __uuidof(IAudioClient);
 
@@ -203,10 +213,28 @@ namespace windows_helper{
         {
             windows_helper::getLastErrorMessage();
         }
+        
+        LPCGUID audio_session_guid = nullptr;
+        REFERENCE_TIME minimum_100_ns = 10;//1ms
+        hr=pAudioClient->Initialize(
+            AUDCLNT_SHAREMODE_SHARED,//chose shared mode or exclusive to have exclusive access to the endpoint
+            0,//stream flags
+            minimum_100_ns,//buffer requested to the endpoint in exclusive mode, or to the audio engine in shared
+            0,//because in shared mode, in exclusive this sets the periodicity for the endpoint
+            pFormat,
+            audio_session_guid//set to null this ptr indicates that we don't want wasapi to use session info
+            //sessions
+            //http://msdn.microsoft.com/en-us/library/windows/desktop/dd370796(v=vs.85).aspx
+            );
+        if(hr!=ERROR_SUCCESS){
+            windows_helper::getLastErrorMessage();
+        }
+        
+        CoTaskMemFree(pFormat);
         return true;
     }
     unsigned audio_device::buffer_size(){
-        if(!is_active())
+        if(!is_initialized())
             return 0;
         unsigned buffersize = 0;
         HRESULT hr = pAudioClient->GetBufferSize(&buffersize);
@@ -219,7 +247,7 @@ namespace windows_helper{
         return buffersize;
     }
     std::chrono::nanoseconds audio_device::period(){
-        if(!is_active())
+        if(!is_initialized())
             return std::chrono::nanoseconds(0);
         REFERENCE_TIME default_period = 0;
         REFERENCE_TIME min_period = 0;
@@ -231,27 +259,104 @@ namespace windows_helper{
         }
         return std::chrono::nanoseconds(default_period*100);
     }
+    
+    bool audio_device::set_callback(const audio_callback& callback){
+        if(!is_initialized())
+            return false;
+        mCallback = callback;
+        return true;
+    }
     void audio_device::start(){
-        if(!is_active())
-            return ;
+
+
+        if(!is_initialized())
+            return;
         HRESULT hr = pAudioClient->Start();
         if(hr!=ERROR_SUCCESS)
         {
             windows_helper::getLastErrorMessage();
             
         }
-        return ;
+
+
+
+        mFuture = std::async([this](){internal_process();});
     }
-    void audio_device::stop(){
-        if(!is_active())
-            return ;
-        HRESULT hr = pAudioClient->Stop();
+void audio_device::internal_process(){
+            
+    const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
+    IAudioRenderClient *pRenderClient = nullptr;
+    HRESULT hr = pAudioClient->GetService(
+                        IID_IAudioRenderClient,
+                        (void**)&pRenderClient);
+    if(hr!=ERROR_SUCCESS)
+    {
+        windows_helper::getLastErrorMessage();
+            
+    }
+    UINT32 bufferFrameCount=0;
+
+    // Get the actual size of the allocated buffer.
+    hr = pAudioClient->GetBufferSize(&bufferFrameCount);
+    if(hr!=ERROR_SUCCESS)
+    {
+        windows_helper::getLastErrorMessage();
+            
+    }
+    auto period_ = period();
+
+    DWORD flags = 0;
+    BYTE * pData=nullptr;
+    mRunProcess.exchange(true);
+    while (flags != AUDCLNT_BUFFERFLAGS_SILENT && mRunProcess)
+    {
+        UINT32 numFramesPadding=0;
+        // Sleep for half the buffer duration.
+        //Sleep((DWORD)(hnsActualDuration/REFTIMES_PER_MILLISEC/2));
+        std::this_thread::sleep_for(period_/2);
+        // See how much buffer space is available.
+        hr = pAudioClient->GetCurrentPadding(&numFramesPadding);
         if(hr!=ERROR_SUCCESS)
         {
             windows_helper::getLastErrorMessage();
             
         }
-        return ;
+
+        int numFramesAvailable = bufferFrameCount - numFramesPadding;
+
+        // Grab all the available space in the shared buffer.
+        hr = pRenderClient->GetBuffer(numFramesAvailable, &pData);
+        if(hr!=ERROR_SUCCESS)
+        {
+            windows_helper::getLastErrorMessage();
+            
+        }
+        audio_buffer buffer(mFormat,pData,numFramesAvailable);
+        mCallback(buffer);
+
+                
+
+        hr = pRenderClient->ReleaseBuffer(numFramesAvailable, flags);
+        if(hr!=ERROR_SUCCESS)
+        {
+            windows_helper::getLastErrorMessage();
+            
+        }
+    }
+
+
+    hr = pAudioClient->Stop();
+    if(hr!=ERROR_SUCCESS)
+    {
+        windows_helper::getLastErrorMessage();
+            
+    }
+    return ;
+}
+            
+    void audio_device::stop(){
+        mRunProcess.exchange(false);
+        mFuture.wait();
     }
     audio_device::id audio_device::get_id(){
         if(pDeviceHandle==nullptr)
@@ -288,29 +393,6 @@ namespace windows_helper{
 
     audio_device::~audio_device(){
         WIN_SAFE_RELEASE(pAudioClient);
-        CoTaskMemFree(pFormat);
         WIN_SAFE_RELEASE(pDeviceHandle);
     }
 
-    void audio_device::activate(){
-        if(is_active())
-            return;
-        if(!is_initialized())
-            return;
-        LPCGUID audio_session_guid = nullptr;
-        REFERENCE_TIME minimum_100_ns = 10;//1ms
-        HRESULT hr=pAudioClient->Initialize(
-            AUDCLNT_SHAREMODE_SHARED,//chose shared mode or exclusive to have exclusive access to the endpoint
-            0,//stream flags
-            minimum_100_ns,//buffer requested to the endpoint in exclusive mode, or to the audio engine in shared
-            0,//because in shared mode, in exclusive this sets the periodicity for the endpoint
-            pFormat,
-            audio_session_guid//set to null this ptr indicates that we don't want wasapi to use session info
-            //sessions
-            //http://msdn.microsoft.com/en-us/library/windows/desktop/dd370796(v=vs.85).aspx
-            );
-        if(hr!=ERROR_SUCCESS){
-            windows_helper::getLastErrorMessage();
-        }
-        mActive =true;
-    }

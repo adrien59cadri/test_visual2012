@@ -14,6 +14,10 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
+#include <functional>
+#include <array>
+#include <future>
+#include <atomic>
 
 namespace windows_helper{
     bool scanAudioEndpoints();
@@ -29,22 +33,49 @@ enum class bit_order{
     little
 };
 
+enum class audio_sample_data_type{
+    eInt16,
+    eInt32,
+    eUInt16,
+    eUInt32,
+    eFloat32
+};
+
 /**
  * \brief class aims to describe the format used to initialize a strem, or check if the device supports it
  * it would be best to use user defined types, compatible with MKS system and user literals
  */
-template<typename sample_data_type_t,bit_order bit_order_t >
-class audio_format{
+class audio_format {
 public:
-    audio_format():mBitOrder(bit_order_t){}
+    
     double mSampleRate;
     unsigned mChannelCount;
-    typedef sample_data_type_t sample_data_type;
+    audio_sample_data_type mSampleDataType;
     bit_order mBitOrder;
 };
 
+/**
+ * \brief buffer passed to the callback
+ * i don't like the void * we loose the strong type safety here ...
+ * an idea could be to have a template <typename data_type>, but then we have to check the consistency of format and data_type...
+ */
 
+class audio_buffer{
+public:
+    audio_buffer(const audio_format& format,void *data,size_t length)
+        :mFormat(format),mData(data),mSize(length){}
+    size_t size()const{return mSize;}
 
+private:
+    size_t mSize;
+    void * mData;
+    audio_format mFormat;
+};
+
+/**
+ * the callback is a function object that will be called by the device to fill the audio_buffer
+ */
+typedef std::function<void(audio_buffer&)> audio_callback;
 /**
  * \brief describes an audio device
  * can be open in exclusive of shared mode (shared mode only accepted now)
@@ -52,7 +83,7 @@ public:
  * which mean it is associated to a device of the system
  * - Once the device as a proper id it is "initializable"
  * - You can then initialize it by providing an audio format, or use the default init
- * - Once initialized you can try to open the stream
+ * - Once initialized you can try to open a stream and provide a callback to call
  */
 class audio_device{
 public:
@@ -76,20 +107,29 @@ public:
     unsigned buffer_size();
     std::chrono::nanoseconds period();
     bool initializable(){return id()!=get_id();}
-    template <typename audio_format_t>
-    bool initialize(const audio_format_t & format);
+
+
+    
+    bool initialize(const audio_format & format);
     bool initialize();
+
+    bool set_callback(const audio_callback & inCallback);
+    
     void start();
     void stop();
-    bool is_active(){return mActive;}
-    void activate();
+    void close();
+
     bool is_initialized()const {return pDeviceHandle!=nullptr && pAudioClient!=nullptr;}
 private:
+    void internal_process();
     audio_device(const audio_device&);
     native_handle_type pDeviceHandle;
     IAudioClient * pAudioClient;
     bool mActive;
-    WAVEFORMATEX * pFormat;
+    audio_format mFormat;
+    audio_callback mCallback;
+    std::future<void> mFuture;
+    std::atomic_bool mRunProcess;
 };
 
 
