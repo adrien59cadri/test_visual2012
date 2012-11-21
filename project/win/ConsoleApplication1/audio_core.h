@@ -76,7 +76,9 @@ public:
     unsigned buffer_size();
     std::chrono::nanoseconds period();
     bool initializable(){return id()!=get_id();}
-    void initialize();
+    template <typename audio_format_t>
+    bool initialize(const audio_format_t & format);
+    bool initialize();
     void start();
     void stop();
     bool is_active(){return mActive;}

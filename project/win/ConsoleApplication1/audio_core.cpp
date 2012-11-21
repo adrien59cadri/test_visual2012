@@ -180,9 +180,16 @@ namespace windows_helper{
         std::swap(mActive,d.mActive);
     }
     
-    void audio_device::initialize(){
+    bool audio_device::initialize(){
+        audio_format<int16_t,bit_order::little> format;
+        format.mChannelCount = 2;
+        format.mSampleRate = 44100.;
+        return initialize<decltype(format)>(format);
+    }
+    template<typename audio_format_t >
+    bool audio_device::initialize(const audio_format_t& format){
         if(!initializable())
-            return;
+            return false;
 
         const IID IID_IAudioClient = __uuidof(IAudioClient);
 
@@ -196,7 +203,7 @@ namespace windows_helper{
         {
             windows_helper::getLastErrorMessage();
         }
-
+        return true;
     }
     unsigned audio_device::buffer_size(){
         if(!is_active())
