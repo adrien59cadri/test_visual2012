@@ -387,16 +387,16 @@ void audio_device::internal_process(){
     HRESULT hr = pAudioClient->GetService(
                         IID_IAudioRenderClient,
                         (void**)&pRenderClient);
-    if(hr!=ERROR_SUCCESS)
+	if(hr!=S_OK || pRenderClient==nullptr)
     {
         windows_helper::getLastErrorMessage();
-            
+            return;
     }
     UINT32 bufferFrameCount=0;
 
     // Get the actual size of the allocated buffer.
     hr = pAudioClient->GetBufferSize(&bufferFrameCount);
-    if(hr!=ERROR_SUCCESS)
+    if(hr!=S_OK)
     {
         windows_helper::getLastErrorMessage();
             
