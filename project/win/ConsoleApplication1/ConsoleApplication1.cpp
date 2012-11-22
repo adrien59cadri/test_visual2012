@@ -1,8 +1,9 @@
 #include "audio_core.h"
-static int count = 0;
+static std::atomic_int count;
 
 void process(audio_buffer &buff){
-        std::cout<<count++<<".";
+
+	std::cout<<std::this_thread::get_id()<<" : "<<count++<<std::endl;
 }
 
 
@@ -23,9 +24,12 @@ int main(int argc, char* argv[])
         it->set_callback(process);
         it->start();
 
-        std::this_thread::sleep_for(std::chrono::seconds(30));
-        it->stop();
+
     }
+	std::cout<<"\nthread id "<<std::this_thread::get_id()<<std::endl;
+	std::this_thread::sleep_for(std::chrono::seconds(30));
+    for(auto it=collection.begin();it!=collection.end();it++)
+		it->stop();
     return 0;
 }
 
