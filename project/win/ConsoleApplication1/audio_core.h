@@ -118,7 +118,7 @@ public:
     id get_id();
     unsigned buffer_size();
     std::chrono::nanoseconds period();
-    bool initializable(){return id()!=get_id();}
+    bool is_valid(){return id()!=get_id();}
 	std::wstring name();
 
 
