@@ -3,7 +3,7 @@ static std::atomic_int count;
 
 void process(audio_buffer &buff){
 
-	std::cout<<std::this_thread::get_id()<<" : "<<count++<<std::endl;
+    std::cout<<std::this_thread::get_id()<<" : "<<count++<<std::endl;
 }
 
 
@@ -26,10 +26,10 @@ int main(int argc, char* argv[])
 
 
     }
-	std::cout<<"\nthread id "<<std::this_thread::get_id()<<std::endl;
-	std::this_thread::sleep_for(std::chrono::seconds(30));
+    std::cout<<"\nthread id "<<std::this_thread::get_id()<<std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(30));
     for(auto it=collection.begin();it!=collection.end();it++)
-		it->stop();
+        it->stop();
     return 0;
 }
 

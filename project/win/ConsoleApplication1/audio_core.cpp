@@ -5,6 +5,7 @@
 
 #ifdef _WIN32    
 #include <windows.h>
+#include <avrt.h>
 #include <strsafe.h>
 #include <mmdeviceapi.h>
 #include <Functiondiscoverykeys_devpkey.h>
@@ -173,7 +174,7 @@ namespace windows_helper{
         mInitialized = true;
     }
 
-    audio_device::audio_device(native_handle_type handle):pAudioClient(nullptr),mActive(false),pDeviceHandle(handle){
+    audio_device::audio_device(native_handle_type handle):pAudioClient(nullptr),hEvent(nullptr),mActive(false),pDeviceHandle(handle){
         mRunProcess.exchange(false);
     }
     audio_device::audio_device(audio_device && d):pAudioClient(nullptr),mActive(false),pDeviceHandle(nullptr){
@@ -192,11 +193,11 @@ namespace windows_helper{
         return initialize(format);
     }
     bool audio_device::initialize(const audio_format& format){
-        if(!initializable())
+        if(!is_valid())
             return false;
         mFormat = format;
         
-        AUDCLNT_SHAREMODE mode  = AUDCLNT_SHAREMODE_SHARED;
+        AUDCLNT_SHAREMODE mode  = AUDCLNT_SHAREMODE_SHARED; //AUDCLNT_SHAREMODE_EXCLUSIVE;//AUDCLNT_SHAREMODE_SHARED;
 
         //fill format ?
 
@@ -287,11 +288,19 @@ namespace windows_helper{
         
         LPCGUID audio_session_guid = nullptr;
         REFERENCE_TIME minimum_100_ns = 10;//1ms
+        REFERENCE_TIME deviceperiod =0;
+        
+        // Initialize the stream to play at the minimum latency.
+        hr = pAudioClient->GetDevicePeriod(NULL, &deviceperiod);
+        if(hr!=S_OK){
+
+        }
+
         hr=pAudioClient->Initialize(
             mode,//chose shared mode or exclusive to have exclusive access to the endpoint
-            0,//stream flags
-            minimum_100_ns,//buffer requested to the endpoint in exclusive mode, or to the audio engine in shared
-            0,//because in shared mode, in exclusive this sets the periodicity for the endpoint
+            AUDCLNT_STREAMFLAGS_EVENTCALLBACK ,//stream flags : here we say we will use callback api
+            deviceperiod,//buffer requested to the endpoint in exclusive mode, or to the audio engine in shared
+            deviceperiod,//because in shared mode, in exclusive this sets the periodicity for the endpoint
             pacceptedformat,//pointer to the filled valid format
             audio_session_guid//set to null this ptr indicates that we don't want wasapi to use session info
             //sessions
@@ -303,7 +312,7 @@ namespace windows_helper{
             {
             case AUDCLNT_E_ALREADY_INITIALIZED : break;
             case AUDCLNT_E_WRONG_ENDPOINT_TYPE : break;
-            case AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED : break;
+            case AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED : break;//Starting with Windows 7, Initialize can return AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED  see http://msdn.microsoft.com/en-us/library/windows/desktop/dd370875%28v=vs.85%29.aspx
             case AUDCLNT_E_BUFFER_SIZE_ERROR : break;
             case AUDCLNT_E_CPUUSAGE_EXCEEDED : break;
             case AUDCLNT_E_DEVICE_INVALIDATED : break;
@@ -362,6 +371,35 @@ namespace windows_helper{
         if(!is_initialized())
             return false;
         mCallback = callback;
+
+        const IID IID_IAudioClient = __uuidof(IAudioClient);
+
+        HRESULT hr = pDeviceHandle->Activate(IID_IAudioClient,CLSCTX_ALL,nullptr,(void**) &pAudioClient);
+        if(hr!=ERROR_SUCCESS || pAudioClient == nullptr)
+        {
+            windows_helper::getLastErrorMessage();
+        }
+
+        // Create an event handle and register it for
+    // buffer-event notifications.
+        hEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        if (hEvent == nullptr)
+        {
+            hr = E_FAIL;
+        }
+        hr = pAudioClient->SetEventHandle(hEvent);
+        if(hr!=S_OK){
+            switch(hr){
+            case E_INVALIDARG ://Parameter eventHandle is NULL or an invalid handle.
+            case AUDCLNT_E_EVENTHANDLE_NOT_EXPECTED ://The audio stream was not initialized for event-driven buffering.
+            case AUDCLNT_E_NOT_INITIALIZED : //The audio stream has not been successfully initialized.
+                //call initialize first
+            case AUDCLNT_E_DEVICE_INVALIDATED : //The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use.
+            case AUDCLNT_E_SERVICE_NOT_RUNNING : //The Windows audio service is not running.
+                break;
+            }
+        }
+
         return true;
     }
     void audio_device::start(){
@@ -370,9 +408,26 @@ namespace windows_helper{
         if(!is_initialized())
             return;
         HRESULT hr = pAudioClient->Start();
-        if(hr!=ERROR_SUCCESS)
+        if(hr!=S_OK)
         {
-            windows_helper::getLastErrorMessage();
+            int toto=0;
+            switch(hr){
+                case AUDCLNT_E_NOT_INITIALIZED://The audio stream has not been successfully initialized.
+                    toto=1;
+                    break;     
+                case AUDCLNT_E_NOT_STOPPED ://The audio stream was not stopped at the time of the Start call.
+                    toto=1;
+                    break;     
+                case AUDCLNT_E_EVENTHANDLE_NOT_SET://The audio stream is configured to use event-driven buffering, but the caller has not called IAudioClient::SetEventHandle to set the event handle on the stream.
+                    toto=1;
+                    break;     
+                case AUDCLNT_E_DEVICE_INVALIDATED : //he audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use.
+                    toto=1;
+                    break;     
+                case AUDCLNT_E_SERVICE_NOT_RUNNING ://The
+                    toto=1;
+                    break;     
+            }
             
         }
 
@@ -401,41 +456,62 @@ void audio_device::internal_process(){
         windows_helper::getLastErrorMessage();
             
     }
-    auto period_ = period();
+    
 
-    DWORD flags = 0;
-    BYTE * pData=nullptr;
+    BYTE *pData;
+    DWORD flags = 0;    
+    
+    
+    
+    
+    // Ask MMCSS to temporarily boost the thread priority
+    // to reduce glitches while the low-latency stream plays.
+    //the name proaudio must match one of this
+    //HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks.
+    DWORD taskIndex = 0;
+    HANDLE WINAPI hTask = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &taskIndex);
+    if (hTask == NULL)
+    {
+        hr = E_FAIL;
+    }
+    BOOL success = AvSetMmThreadPriority(hTask,AVRT_PRIORITY_CRITICAL);
+    if(success != 0)
+    {
+                windows_helper::getLastErrorMessage();
+
+    }
+
+    hr = pAudioClient->Start();  // Start playing.
+    if(hr!=S_OK)
+    {
+        windows_helper::getLastErrorMessage();
+            
+    }
     mRunProcess.exchange(true);
     while (flags != AUDCLNT_BUFFERFLAGS_SILENT && mRunProcess)
     {
-        UINT32 numFramesPadding=0;
-        // Sleep for half the buffer duration.
-        //Sleep((DWORD)(hnsActualDuration/REFTIMES_PER_MILLISEC/2));
-        std::this_thread::sleep_for(period_/2);
-        // See how much buffer space is available.
-        hr = pAudioClient->GetCurrentPadding(&numFramesPadding);
+        // Wait for next buffer event to be signaled.
+        DWORD retval = WaitForSingleObject(hEvent, 2000);//max timeout  
+        if (retval != WAIT_OBJECT_0)
+        {
+            // Event handle timed out after a 2-second wait.
+            pAudioClient->Stop();
+        }
+
+        // Grab the next empty buffer from the audio device.
+        hr = pRenderClient->GetBuffer(bufferFrameCount, &pData);
         if(hr!=S_OK)
         {
             windows_helper::getLastErrorMessage();
             
         }
-
-        int numFramesAvailable = bufferFrameCount - numFramesPadding;
-
-        // Grab all the available space in the shared buffer.
-        hr = pRenderClient->GetBuffer(numFramesAvailable, &pData);
-        if(hr!=ERROR_SUCCESS)
-        {
-            windows_helper::getLastErrorMessage();
-            
-        }
-        audio_buffer buffer(mFormat,pData,numFramesAvailable);
+        // Load the buffer with data from the audio source.
+        //hr = pMySource->LoadData(bufferFrameCount, pData, &flags);
+        audio_buffer buffer(this->mFormat,pData, bufferFrameCount);
         mCallback(buffer);
 
-                
-
-        hr = pRenderClient->ReleaseBuffer(numFramesAvailable, flags);
-        if(hr!=ERROR_SUCCESS)
+        hr = pRenderClient->ReleaseBuffer(bufferFrameCount, flags);
+        if(hr!=S_OK)
         {
             windows_helper::getLastErrorMessage();
             
@@ -470,7 +546,7 @@ void audio_device::internal_process(){
 
     }
     std::wstring audio_device::name(){
-        if(!initializable())
+        if(!is_valid())
             return std::wstring();
         IPropertyStore *pProps=nullptr;
         HRESULT hr = this->pDeviceHandle->OpenPropertyStore(

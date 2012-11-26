@@ -48,18 +48,18 @@ enum class audio_sample_data_type{
 class audio_format {
 public:
     size_t sample_size()const{
-		switch(mSampleDataType){
-		case audio_sample_data_type::eFloat32:
-		case audio_sample_data_type::eInt32:
-		case audio_sample_data_type::eUInt32:
-			return sizeof(uint32_t);
-		case audio_sample_data_type::eInt16:
-		case audio_sample_data_type::eUInt16:
-			return sizeof(uint16_t);
-		default:
-			assert(false);
-		}
-	}
+        switch(mSampleDataType){
+        case audio_sample_data_type::eFloat32:
+        case audio_sample_data_type::eInt32:
+        case audio_sample_data_type::eUInt32:
+            return sizeof(uint32_t);
+        case audio_sample_data_type::eInt16:
+        case audio_sample_data_type::eUInt16:
+            return sizeof(uint16_t);
+        default:
+            assert(false);
+        }
+    }
     double mSampleRate;
     unsigned mChannelCount;
     audio_sample_data_type mSampleDataType;
@@ -119,7 +119,7 @@ public:
     unsigned buffer_size();
     std::chrono::nanoseconds period();
     bool is_valid(){return id()!=get_id();}
-	std::wstring name();
+    std::wstring name();
 
 
     
@@ -143,6 +143,7 @@ private:
     audio_callback mCallback;
     std::future<void> mFuture;
     std::atomic_bool mRunProcess;
+    HANDLE hEvent;
 };
 
 
