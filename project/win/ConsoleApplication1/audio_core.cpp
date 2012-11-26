@@ -195,9 +195,11 @@ namespace windows_helper{
     bool audio_device::initialize(const audio_format& format){
         if(!is_valid())
             return false;
-        mFormat = format;
-        
-        AUDCLNT_SHAREMODE mode  = AUDCLNT_SHAREMODE_SHARED; //AUDCLNT_SHAREMODE_EXCLUSIVE;//AUDCLNT_SHAREMODE_SHARED;
+        mFormat = format;   
+        REFERENCE_TIME deviceperiod=0;
+
+  try_initialize :  
+        AUDCLNT_SHAREMODE mode  = AUDCLNT_SHAREMODE_SHARED;//AUDCLNT_SHAREMODE_EXCLUSIVE;//AUDCLNT_SHAREMODE_SHARED;
 
         //fill format ?
 
@@ -287,14 +289,10 @@ namespace windows_helper{
         }
         
         LPCGUID audio_session_guid = nullptr;
-        REFERENCE_TIME minimum_100_ns = 10;//1ms
-        REFERENCE_TIME deviceperiod =0;
         
-        // Initialize the stream to play at the minimum latency.
-        hr = pAudioClient->GetDevicePeriod(NULL, &deviceperiod);
-        if(hr!=S_OK){
 
-        }
+        //ici pour appeler buffer_size il faut avoir initialisé
+        
 
         hr=pAudioClient->Initialize(
             mode,//chose shared mode or exclusive to have exclusive access to the endpoint
@@ -306,33 +304,62 @@ namespace windows_helper{
             //sessions
             //http://msdn.microsoft.com/en-us/library/windows/desktop/dd370796(v=vs.85).aspx
             );
+
+        
         if(hr!=S_OK){
-
-            switch(hr)
+            if(hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED)
             {
-            case AUDCLNT_E_ALREADY_INITIALIZED : break;
-            case AUDCLNT_E_WRONG_ENDPOINT_TYPE : break;
-            case AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED : break;//Starting with Windows 7, Initialize can return AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED  see http://msdn.microsoft.com/en-us/library/windows/desktop/dd370875%28v=vs.85%29.aspx
-            case AUDCLNT_E_BUFFER_SIZE_ERROR : break;
-            case AUDCLNT_E_CPUUSAGE_EXCEEDED : break;
-            case AUDCLNT_E_DEVICE_INVALIDATED : break;
-            case AUDCLNT_E_DEVICE_IN_USE : break;
-            case AUDCLNT_E_ENDPOINT_CREATE_FAILED : break;
-            case AUDCLNT_E_INVALID_DEVICE_PERIOD : break;
-            case AUDCLNT_E_UNSUPPORTED_FORMAT : break;
-            case AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED : break;
-            case AUDCLNT_E_BUFDURATION_PERIOD_NOT_EQUAL : break;//AUDCLNT_STREAMFLAGS_EVENTCALLBACK flag is set but parameters hnsBufferDuration and hnsPeriodicity are not equal.
-            case AUDCLNT_E_SERVICE_NOT_RUNNING : break;
-            case E_POINTER : break; //pformatisnull
-            case E_INVALIDARG : break;
-            case E_OUTOFMEMORY : break;
-            default :
-                //unknown
-                break;
+                REFERENCE_TIME hnsRequestedDuration = (REFERENCE_TIME)
+                    ((10000.0 * 1000 / mFormat.mSampleRate * buffer_size()) + 0.5);
+                pAudioClient->Release();
+                pAudioClient=nullptr;
+                //reactivate:
+                hr = pDeviceHandle->Activate(IID_IAudioClient,CLSCTX_ALL,nullptr,(void**) &pAudioClient);
+                if(hr!=ERROR_SUCCESS || pAudioClient == nullptr)
+                {
+                    windows_helper::getLastErrorMessage();
+                }
+                hr=pAudioClient->Initialize(
+                    mode,//chose shared mode or exclusive to have exclusive access to the endpoint
+                    AUDCLNT_STREAMFLAGS_EVENTCALLBACK ,//stream flags : here we say we will use callback api
+                    deviceperiod,//buffer requested to the endpoint in exclusive mode, or to the audio engine in shared
+                    deviceperiod,//because in shared mode, in exclusive this sets the periodicity for the endpoint
+                    pacceptedformat,//pointer to the filled valid format
+                    audio_session_guid//set to null this ptr indicates that we don't want wasapi to use session info
+                    //sessions
+                    //http://msdn.microsoft.com/en-us/library/windows/desktop/dd370796(v=vs.85).aspx
+                    );
+
             }
+            if(hr!=S_OK){
+                switch(hr)
+                {
+                case AUDCLNT_E_ALREADY_INITIALIZED : break;
+                case AUDCLNT_E_WRONG_ENDPOINT_TYPE : break;
+                case AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED : break;//Starting with Windows 7, Initialize can return AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED  see http://msdn.microsoft.com/en-us/library/windows/desktop/dd370875%28v=vs.85%29.aspx
+                case AUDCLNT_E_BUFFER_SIZE_ERROR : break;
+                case AUDCLNT_E_CPUUSAGE_EXCEEDED : break;
+                case AUDCLNT_E_DEVICE_INVALIDATED : break;
+                case AUDCLNT_E_DEVICE_IN_USE : break;
+                case AUDCLNT_E_ENDPOINT_CREATE_FAILED : break;
+                case AUDCLNT_E_INVALID_DEVICE_PERIOD : break;
+                case AUDCLNT_E_UNSUPPORTED_FORMAT : break;
+                case AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED : break;
+                case AUDCLNT_E_BUFDURATION_PERIOD_NOT_EQUAL : break;//AUDCLNT_STREAMFLAGS_EVENTCALLBACK flag is set but parameters hnsBufferDuration and hnsPeriodicity are not equal.
+                case AUDCLNT_E_SERVICE_NOT_RUNNING : break;
+                case E_POINTER : break; //pformatisnull
+                case E_INVALIDARG : break;
+                case E_OUTOFMEMORY : break;
+                default :
+                    //unknown
+                    break;
+                }
 
 
 
+                pAudioClient->Release();
+                pAudioClient = nullptr;
+            }
 
         }
         if(pnearestformat!=nullptr)
@@ -371,14 +398,10 @@ namespace windows_helper{
         if(!is_initialized())
             return false;
         mCallback = callback;
-
+        HRESULT hr=S_OK;
         const IID IID_IAudioClient = __uuidof(IAudioClient);
 
-        HRESULT hr = pDeviceHandle->Activate(IID_IAudioClient,CLSCTX_ALL,nullptr,(void**) &pAudioClient);
-        if(hr!=ERROR_SUCCESS || pAudioClient == nullptr)
-        {
-            windows_helper::getLastErrorMessage();
-        }
+
 
         // Create an event handle and register it for
     // buffer-event notifications.
@@ -391,12 +414,10 @@ namespace windows_helper{
         if(hr!=S_OK){
             switch(hr){
             case E_INVALIDARG ://Parameter eventHandle is NULL or an invalid handle.
-            case AUDCLNT_E_EVENTHANDLE_NOT_EXPECTED ://The audio stream was not initialized for event-driven buffering.
-            case AUDCLNT_E_NOT_INITIALIZED : //The audio stream has not been successfully initialized.
-                //call initialize first
-            case AUDCLNT_E_DEVICE_INVALIDATED : //The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use.
-            case AUDCLNT_E_SERVICE_NOT_RUNNING : //The Windows audio service is not running.
-                break;
+            case AUDCLNT_E_EVENTHANDLE_NOT_EXPECTED :std::cout<<"The audio stream was not initialized for event-driven buffering."<<std::endl;break;
+            case AUDCLNT_E_NOT_INITIALIZED : std::cout<<"The audio stream has not been successfully initialized. call initialize first"<<std::endl;break;
+            case AUDCLNT_E_DEVICE_INVALIDATED : std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+            case AUDCLNT_E_SERVICE_NOT_RUNNING : std::cout<<"The Windows audio service is not running."<<std::endl;break;
             }
         }
 
@@ -407,29 +428,7 @@ namespace windows_helper{
 
         if(!is_initialized())
             return;
-        HRESULT hr = pAudioClient->Start();
-        if(hr!=S_OK)
-        {
-            int toto=0;
-            switch(hr){
-                case AUDCLNT_E_NOT_INITIALIZED://The audio stream has not been successfully initialized.
-                    toto=1;
-                    break;     
-                case AUDCLNT_E_NOT_STOPPED ://The audio stream was not stopped at the time of the Start call.
-                    toto=1;
-                    break;     
-                case AUDCLNT_E_EVENTHANDLE_NOT_SET://The audio stream is configured to use event-driven buffering, but the caller has not called IAudioClient::SetEventHandle to set the event handle on the stream.
-                    toto=1;
-                    break;     
-                case AUDCLNT_E_DEVICE_INVALIDATED : //he audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use.
-                    toto=1;
-                    break;     
-                case AUDCLNT_E_SERVICE_NOT_RUNNING ://The
-                    toto=1;
-                    break;     
-            }
-            
-        }
+
 
 
 
@@ -474,17 +473,29 @@ void audio_device::internal_process(){
     {
         hr = E_FAIL;
     }
-    BOOL success = AvSetMmThreadPriority(hTask,AVRT_PRIORITY_CRITICAL);
-    if(success != 0)
-    {
-                windows_helper::getLastErrorMessage();
 
-    }
 
-    hr = pAudioClient->Start();  // Start playing.
+    hr = pAudioClient->Start();
     if(hr!=S_OK)
     {
-        windows_helper::getLastErrorMessage();
+        int toto=0;
+        switch(hr){
+            case AUDCLNT_E_NOT_INITIALIZED : std::cout<<"The audio stream has not been successfully initialized."<<std::endl;break;
+                toto=1;
+                break;     
+            case AUDCLNT_E_NOT_STOPPED  : std::cout<<"The audio stream was not stopped at the time of the Start call."<<std::endl;break;
+                toto=1;
+                break;     
+            case AUDCLNT_E_EVENTHANDLE_NOT_SET : std::cout<<"The audio stream is configured to use event-driven buffering, but the caller has not called IAudioClient::SetEventHandle to set the event handle on the stream."<<std::endl;break;
+                toto=1;
+                break;     
+            case AUDCLNT_E_DEVICE_INVALIDATED : std::cout<<"he audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+                toto=1;
+                break;     
+            case AUDCLNT_E_SERVICE_NOT_RUNNING :std::cout<<"The Windows audio service is not running."<<std::endl;break; 
+                toto=1;
+                break;     
+        }
             
     }
     mRunProcess.exchange(true);
