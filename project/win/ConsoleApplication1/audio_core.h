@@ -78,7 +78,7 @@ public:
         :mFormat(format),mData(data),mSize(length){}
     size_t size()const{return mSize;}
 
-private:
+
     size_t mSize;
     void * mData;
     audio_format mFormat;
@@ -130,7 +130,6 @@ public:
     
     void start();
     void stop();
-    void close();
 
     bool is_initialized()const {return pDeviceHandle!=nullptr && pAudioClient!=nullptr;}
 private:

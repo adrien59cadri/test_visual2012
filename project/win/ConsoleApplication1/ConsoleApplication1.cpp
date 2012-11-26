@@ -1,9 +1,20 @@
 #include "audio_core.h"
 static std::atomic_int count;
+static float phase=0;
 
 void process(audio_buffer &buff){
 
     std::cout<<std::this_thread::get_id()<<" : "<<count++<<std::endl;
+	auto type=buff.mFormat.mSampleDataType;
+	float * t=((float*)buff.mData);
+
+	float pi=3.14;
+	for(int i=0;i<buff.mSize;i++){
+		t[i] = sinf(phase);
+		phase+=2*pi*440/buff.mFormat.mSampleRate;
+		while(phase > 2*pi)
+			phase-=2*pi;
+	}
 }
 
 

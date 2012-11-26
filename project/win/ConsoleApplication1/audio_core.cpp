@@ -189,7 +189,7 @@ namespace windows_helper{
         format.mChannelCount = 2;
         format.mSampleRate = 44100.;
         format.mBitOrder = bit_order::little;
-        format.mSampleDataType = audio_sample_data_type::eInt16;
+		format.mSampleDataType = audio_sample_data_type::eFloat32;
         return initialize(format);
     }
     bool audio_device::initialize(const audio_format& format){
@@ -198,8 +198,7 @@ namespace windows_helper{
         mFormat = format;   
         REFERENCE_TIME deviceperiod=0;
 
-  try_initialize :  
-        AUDCLNT_SHAREMODE mode  = AUDCLNT_SHAREMODE_SHARED;//AUDCLNT_SHAREMODE_EXCLUSIVE;//AUDCLNT_SHAREMODE_SHARED;
+        AUDCLNT_SHAREMODE mode  = AUDCLNT_SHAREMODE_EXCLUSIVE;//AUDCLNT_SHAREMODE_EXCLUSIVE;//AUDCLNT_SHAREMODE_SHARED;
 
         //fill format ?
 
@@ -457,7 +456,6 @@ void audio_device::internal_process(){
     }
     
 
-    BYTE *pData;
     DWORD flags = 0;    
     
     
@@ -501,14 +499,16 @@ void audio_device::internal_process(){
     mRunProcess.exchange(true);
     while (flags != AUDCLNT_BUFFERFLAGS_SILENT && mRunProcess)
     {
-        // Wait for next buffer event to be signaled.
+		BYTE *pData=nullptr;
+
+	// Wait for next buffer event to be signaled.
         DWORD retval = WaitForSingleObject(hEvent, 2000);//max timeout  
         if (retval != WAIT_OBJECT_0)
         {
             // Event handle timed out after a 2-second wait.
             pAudioClient->Stop();
         }
-
+		int size = buffer_size();
         // Grab the next empty buffer from the audio device.
         hr = pRenderClient->GetBuffer(bufferFrameCount, &pData);
         if(hr!=S_OK)
