@@ -10,8 +10,10 @@ void process(audio_buffer &buff){
     auto type=buff.mFormat.mSampleDataType;
     float * t=((float*)buff.mData);
     const float f = 440./buff.mFormat.mSampleRate;
+    const float tierce = 5.f/4.f;
     for(int i=0;i<buff.mSize;i++){
-        t[i] = sinf(phase);i++;//interleaved
+        t[i*2] = sinf(phase);//interleaved
+        t[2*i+1] = sinf(phase * tierce);
         phase+=M_2_PI*f;
         while(phase > M_2_PI)
             phase-=M_2_PI;
