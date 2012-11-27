@@ -486,6 +486,8 @@ void audio_device::internal_process(){
     {
         hr = E_FAIL;
     }
+    
+    BOOL test=AvSetMmThreadPriority (hTask, AVRT_PRIORITY_CRITICAL);
 
 
     hr = pAudioClient->Start();
@@ -563,7 +565,7 @@ void audio_device::internal_process(){
 
 
     hr = pAudioClient->Stop();
-    BOOL test=AvRevertMmThreadCharacteristics(hTask);
+    test=AvRevertMmThreadCharacteristics(hTask);
 
     if(hr!=S_OK)
     {
