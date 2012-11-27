@@ -70,7 +70,7 @@ std::string audio_device::name(){
 
     CFStringRef theDeviceName;
 	UInt32 thePropSize;
-    AudioObjectPropertyAddress thePropertyAddress = { kAudioHardwarePropertyDevices, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster };
+    AudioObjectPropertyAddress thePropertyAddress;
     // get the device name
     thePropSize = sizeof(CFStringRef);
     thePropertyAddress.mSelector = kAudioObjectPropertyName;
@@ -92,5 +92,33 @@ std::string audio_device::name(){
     std::string name(charbuffer);
     CFRelease(theDeviceName);
     return name;
+}
+
+bool audio_device::initialize(){
+
+}
+
+bool audio_device::set_callback(const audio_callback & inCallback){
+    mCallback = inCallback;
+    
+    OSStatus theError = AudioDeviceCreateIOProcID(mAudioDeviceId, audio_device::ioproc, this, &mIOProcID);
+}
+
+OSStatus audio_device::ioproc(AudioDeviceID inDevice, const AudioTimeStamp * inNow
+                , const AudioBufferList* inInputData, const AudioTimeStamp* inInputTime, AudioBufferList * outOutData, const AudioTimeStamp * inOutputTime, void * inClientData){
+    auto device = reinterpret_cast<audio_device*>(inClientData);
+    auto buffernb = outOutData->mNumberBuffers;
+    auto channelsnb =outOutData->mBuffers[0].mNumberChannels;
+    void * data =outOutData->mBuffers[0].mData;
+    auto datasize =outOutData->mBuffers[0].mDataByteSize;
+    audio_buffer buffer(device->mFormat,data,datasize);
+    device->mCallback(buffer);
+}
+void audio_device::start(){
+    auto    theError = AudioDeviceStart(mAudioDeviceId, mIOProcID);
+    
+}
+void audio_device::stop(){
+    auto    theError = AudioDeviceStop(mAudioDeviceId, mIOProcID);
 }
 

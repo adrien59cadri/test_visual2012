@@ -122,16 +122,17 @@ public:
     
     
     //bool initialize(const audio_format & format);
-    //bool initialize();
+    bool initialize();
     
-    //bool set_callback(const audio_callback & inCallback);
+    bool set_callback(const audio_callback & inCallback);
     
-    //void start();
-    //void stop();
+    void start();
+    void stop();
     
     //bool is_initialized()const {return pDeviceHandle!=nullptr ;}
 private:
-    //void internal_process();
+    static OSStatus ioproc(AudioDeviceID inDevice, const AudioTimeStamp * inNow
+                    , const AudioBufferList* inInputData, const AudioTimeStamp* inInputTime, AudioBufferList * outOutData, const AudioTimeStamp * inOutputTime, void * inClientData);
     audio_device(const audio_device&);
     //native_handle_type pDeviceHandle;
     AudioDeviceID mAudioDeviceId;
@@ -141,6 +142,7 @@ private:
     std::future<void> mFuture;
     //std::atomic_bool mRunProcess;
     bool mDeviceModeIsExclusive;
+    AudioDeviceIOProcID mIOProcID;
 };
 
 
