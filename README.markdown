@@ -54,7 +54,7 @@ Other ideas that I will not implement now are :
 	format.bit_order = bit_order::little;
 	for(device : devices){
 		if(!device.initialize(format))
-			format = device.gurrent_format();
+			format = device.current_format();
 		device.register_callback(my_callback);
 		device.start();
 	}
