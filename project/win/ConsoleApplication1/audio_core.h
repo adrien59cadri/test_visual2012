@@ -143,6 +143,7 @@ private:
     std::future<void> mFuture;
     std::atomic_bool mRunProcess;
     HANDLE hEvent;
+    bool mDeviceModeIsExclusive;
 };
 
 
@@ -152,7 +153,7 @@ public:
     typedef std::vector<audio_device>::iterator iterator;
     iterator begin(){return std::vector<audio_device>::begin();}
     iterator end(){return std::vector<audio_device>::end();}
-
+    audio_device & at(size_type pos){return std::vector<audio_device>::at(pos);}
     audio_device_collection();
 private:
     //see http://msdn.microsoft.com/en-us/library/windows/desktop/ms680582%28v=vs.85%29.aspx

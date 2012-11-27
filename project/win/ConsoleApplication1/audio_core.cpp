@@ -17,6 +17,10 @@
 
 
 namespace windows_helper{
+
+
+
+
 #define WIN_SAFE_RELEASE(punk){ \
     if((punk)!=nullptr){(punk)->Release();(punk) = nullptr; }}
 
@@ -36,7 +40,7 @@ namespace windows_helper{
             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
             (LPTSTR) &lpMsgBuf,
             0, NULL );
-        std::cout<<lpMsgBuf;
+        std::cout<<std::endl<<"error msg : "<<lpMsgBuf<<std::endl;
         LocalFree(lpMsgBuf);
     }
     bool scanAudioEndpoints(){
@@ -189,7 +193,7 @@ namespace windows_helper{
         format.mChannelCount = 2;
         format.mSampleRate = 44100.;
         format.mBitOrder = bit_order::little;
-		format.mSampleDataType = audio_sample_data_type::eFloat32;
+        format.mSampleDataType = audio_sample_data_type::eFloat32;
         return initialize(format);
     }
     bool audio_device::initialize(const audio_format& format){
@@ -198,7 +202,7 @@ namespace windows_helper{
         mFormat = format;   
         REFERENCE_TIME deviceperiod=0;
 
-        AUDCLNT_SHAREMODE mode  = AUDCLNT_SHAREMODE_EXCLUSIVE;//AUDCLNT_SHAREMODE_EXCLUSIVE;//AUDCLNT_SHAREMODE_SHARED;
+        AUDCLNT_SHAREMODE mode  = AUDCLNT_SHAREMODE_SHARED;//AUDCLNT_SHAREMODE_EXCLUSIVE;//AUDCLNT_SHAREMODE_SHARED;
 
         //fill format ?
 
@@ -226,20 +230,22 @@ namespace windows_helper{
 
         CoTaskMemFree(pmixerformat);
         //end
-
-        WAVEFORMATEX requestedformat ;
+        
+        WAVEFORMATEXTENSIBLE requestedformat ;
         //memcpy(&requestedformat,pmixerformat,sizeof(requestedformat));
         
-        requestedformat.nChannels = format.mChannelCount;
-        requestedformat.nSamplesPerSec = (int)( format.mSampleRate);
-        requestedformat.wBitsPerSample = format.sample_size() * 8;
-        requestedformat.nAvgBytesPerSec = format.mChannelCount * format.sample_size() * format.mSampleRate;
-        requestedformat.wFormatTag=WAVE_FORMAT_PCM;
-        requestedformat.nBlockAlign=format.mChannelCount*format.sample_size();
-        requestedformat.cbSize=0;//ignored because WAVE_FORMAT_PCM
+        requestedformat.Format.nChannels = format.mChannelCount;
+        requestedformat.Format.nSamplesPerSec = (int)( format.mSampleRate);
+        requestedformat.Format.wBitsPerSample = format.sample_size() * 8;
+        requestedformat.Format.nAvgBytesPerSec = format.mChannelCount * format.sample_size() * format.mSampleRate;
+        requestedformat.Format.wFormatTag=WAVE_FORMAT_IEEE_FLOAT;//  format.mSampleDataType==audio_sample_data_type::eFloat32? WAVE_FORMAT_IEEE_FLOAT:WAVE_FORMAT_PCM;
+        requestedformat.SubFormat= format.mSampleDataType==audio_sample_data_type::eFloat32? KSDATAFORMAT_SUBTYPE_IEEE_FLOAT:KSDATAFORMAT_SUBTYPE_PCM; 
+        requestedformat.Format.nBlockAlign=format.mChannelCount*format.sample_size();
+        requestedformat.Format.cbSize=0;//ignored because WAVE_FORMAT_PCM
+        requestedformat.dwChannelMask=SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT;
         
         WAVEFORMATEX * pacceptedformat = nullptr;
-        WAVEFORMATEX * pnearestformat = nullptr;//should perhaps be freed
+        WAVEFORMATEX * pnearestformat = nullptr;
         WAVEFORMATEX**ppnearestformat = nullptr;
         if(mode == AUDCLNT_SHAREMODE_EXCLUSIVE)
         {
@@ -248,11 +254,18 @@ namespace windows_helper{
         }else{
             ppnearestformat = &pnearestformat;
         }
-        hr = pAudioClient->IsFormatSupported(mode,&requestedformat,ppnearestformat);
+        hr = pAudioClient->IsFormatSupported(mode,&requestedformat.Format,ppnearestformat);
+
+
+        WAVEFORMATEXTENSIBLE * pnearestextensible = (WAVEFORMATEXTENSIBLE*)(*ppnearestformat);
+
+
+
+
         if(hr == S_OK)
         {
             //format accepté
-            pacceptedformat  = &requestedformat;
+            pacceptedformat  = &requestedformat.Format;
         }
         else if(hr == S_FALSE)
         {
@@ -268,7 +281,7 @@ namespace windows_helper{
                 //ouch, mode rejected ... no closest solution ...
             }
             mode = AUDCLNT_SHAREMODE_SHARED;
-            pacceptedformat = &requestedformat;
+            pacceptedformat = &requestedformat.Format;
         }else
         {
             //ouch here we failed
@@ -363,6 +376,8 @@ namespace windows_helper{
         }
         if(pnearestformat!=nullptr)
             CoTaskMemFree(pnearestformat);
+
+        mDeviceModeIsExclusive = mode == AUDCLNT_SHAREMODE_EXCLUSIVE;
 
         return true;
     }
@@ -479,38 +494,46 @@ void audio_device::internal_process(){
         int toto=0;
         switch(hr){
             case AUDCLNT_E_NOT_INITIALIZED : std::cout<<"The audio stream has not been successfully initialized."<<std::endl;break;
-                toto=1;
-                break;     
             case AUDCLNT_E_NOT_STOPPED  : std::cout<<"The audio stream was not stopped at the time of the Start call."<<std::endl;break;
-                toto=1;
-                break;     
             case AUDCLNT_E_EVENTHANDLE_NOT_SET : std::cout<<"The audio stream is configured to use event-driven buffering, but the caller has not called IAudioClient::SetEventHandle to set the event handle on the stream."<<std::endl;break;
-                toto=1;
-                break;     
-            case AUDCLNT_E_DEVICE_INVALIDATED : std::cout<<"he audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
-                toto=1;
-                break;     
-            case AUDCLNT_E_SERVICE_NOT_RUNNING :std::cout<<"The Windows audio service is not running."<<std::endl;break; 
-                toto=1;
-                break;     
+            case AUDCLNT_E_DEVICE_INVALIDATED : std::cout<<"he audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break; 
+            case AUDCLNT_E_SERVICE_NOT_RUNNING :std::cout<<"The Windows audio service is not running."<<std::endl;break;  
         }
             
     }
     mRunProcess.exchange(true);
     while (flags != AUDCLNT_BUFFERFLAGS_SILENT && mRunProcess)
     {
-		BYTE *pData=nullptr;
+        UINT32 numFramesPadding=0;
+        if(!mDeviceModeIsExclusive)
+        {
+            hr = pAudioClient->GetCurrentPadding(&numFramesPadding);
+            if(hr!=S_OK)
+            {
+                switch(hr)
+                {
+                    case AUDCLNT_E_NOT_INITIALIZED : std::cout<<"The audio stream has not been successfully initialized."<<std::endl;break;
+                    case AUDCLNT_E_DEVICE_INVALIDATED :std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+                    case AUDCLNT_E_SERVICE_NOT_RUNNING :std::cout<<"The Windows audio service is not running."<<std::endl;break;
+                    case E_POINTER :std::cout<<"param is null"<<std::endl;break;
+                    default : std::cout<<"unknown"<<std::endl;break;
+                }
+            }
+        }
+        UINT32 numFramesAvailable = bufferFrameCount - numFramesPadding;
 
-	// Wait for next buffer event to be signaled.
+        BYTE *pData=nullptr;
+
+    // Wait for next buffer event to be signaled.
         DWORD retval = WaitForSingleObject(hEvent, 2000);//max timeout  
         if (retval != WAIT_OBJECT_0)
         {
             // Event handle timed out after a 2-second wait.
-            pAudioClient->Stop();
+            pAudioClient->Stop();break;
         }
-		int size = buffer_size();
+        int size = buffer_size();
         // Grab the next empty buffer from the audio device.
-        hr = pRenderClient->GetBuffer(bufferFrameCount, &pData);
+        hr = pRenderClient->GetBuffer(numFramesAvailable, &pData);
         if(hr!=S_OK)
         {
             windows_helper::getLastErrorMessage();
@@ -518,19 +541,30 @@ void audio_device::internal_process(){
         }
         // Load the buffer with data from the audio source.
         //hr = pMySource->LoadData(bufferFrameCount, pData, &flags);
-        audio_buffer buffer(this->mFormat,pData, bufferFrameCount);
+        audio_buffer buffer(this->mFormat,pData, numFramesAvailable);
         mCallback(buffer);
 
-        hr = pRenderClient->ReleaseBuffer(bufferFrameCount, flags);
+        hr = pRenderClient->ReleaseBuffer(numFramesAvailable, flags);
         if(hr!=S_OK)
         {
-            windows_helper::getLastErrorMessage();
+            switch(hr)
+            {
+                
+            case AUDCLNT_E_INVALID_SIZE : std::cout<<"The NumFramesWritten value exceeds the NumFramesRequested value specified in the previous IAudioRenderClient::GetBuffer call."<<std::endl;break;
+            case AUDCLNT_E_BUFFER_SIZE_ERROR : std::cout<<"The stream is exclusive mode and uses event-driven buffering, but the client attempted to release a packet that was not the size of the buffer."<<std::endl;break;
+            case AUDCLNT_E_OUT_OF_ORDER : std::cout<<"This call was not preceded by a corresponding call to IAudioRenderClient::GetBuffer."<<std::endl;break;
+            case AUDCLNT_E_DEVICE_INVALIDATED : std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+            case AUDCLNT_E_SERVICE_NOT_RUNNING : std::cout<<"The Windows audio service is not running."<<std::endl;break;
+            case E_INVALIDARG : std::cout<<"Parameter dwFlags is not a valid value."<<std::endl;break;
+            }
             
         }
     }
 
 
     hr = pAudioClient->Stop();
+    BOOL test=AvRevertMmThreadCharacteristics(hTask);
+
     if(hr!=S_OK)
     {
         windows_helper::getLastErrorMessage();
