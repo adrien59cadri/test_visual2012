@@ -5,7 +5,7 @@ static std::atomic_int count;
 static float phase=0.;
 
 void process(audio_buffer &buff){
-
+//note, this use a lot of cpu (cout)
     std::cout<<std::this_thread::get_id()<<" : "<<count++<<std::endl;
     auto type=buff.mFormat.mSampleDataType;
     float * t=((float*)buff.mData);

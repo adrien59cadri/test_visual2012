@@ -233,6 +233,7 @@ namespace windows_helper{
         std::swap(pAudioClient,d.pAudioClient);
         std::swap(mFormat,d.mFormat);
         std::swap(mActive,d.mActive);
+		std::swap(mId,d.mId);
     }
     
     bool audio_device::initialize(){
@@ -525,6 +526,7 @@ void audio_device::internal_process(){
     UINT32 bufferFrameCount=0;
 
     // Get the actual size of the allocated buffer.
+	hr=pAudioClient->GetBufferSize(&bufferFrameCount);
         if(hr!=S_OK)
         {
 
