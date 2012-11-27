@@ -99,7 +99,7 @@ typedef std::function<void(audio_buffer&)> audio_callback;
  */
 class audio_device{
 public:
-    typedef IMMDevice * native_handle_type;
+//    typedef IMMDevice * native_handle_type;
     class id:std::wstring{
     public:
         id():std::wstring(){}
@@ -109,16 +109,17 @@ public:
         friend std::wostream& operator<<(std::wostream& out, const audio_device::id& id){
             return out<<id.data();	
         } 
+		const wchar_t* data()const{return std::wstring::data();}
     };
-    audio_device(native_handle_type handle=nullptr);
+  //  audio_device(native_handle_type handle=nullptr);
+	audio_device(const id& id);
     audio_device(audio_device && d);
     ~audio_device();
-    native_handle_type native_handle() const{return pDeviceHandle;}
+   // native_handle_type native_handle() const{return pDeviceHandle;}
     //! reurn the id of the audio device if initialized, or defaut if not
-    id get_id();
+	const id get_id()const {return mId;}
     unsigned buffer_size();
     std::chrono::nanoseconds period();
-    bool is_valid(){return id()!=get_id();}
     std::wstring name();
 
 
@@ -135,8 +136,9 @@ public:
 private:
     void internal_process();
     audio_device(const audio_device&);
-    native_handle_type pDeviceHandle;
+    IMMDevice *pDeviceHandle;
     IAudioClient * pAudioClient;
+	id mId;
     bool mActive;
     audio_format mFormat;
     audio_callback mCallback;

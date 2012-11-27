@@ -43,84 +43,84 @@ namespace windows_helper{
         std::cout<<std::endl<<"error msg : "<<lpMsgBuf<<std::endl;
         LocalFree(lpMsgBuf);
     }
-    bool scanAudioEndpoints(){
-        HRESULT hr= CoInitialize(nullptr);
-        if(hr!=ERROR_SUCCESS){
-            return false;
-        }
-        //create instance
-        IMMDeviceEnumerator * pEnumerator=nullptr;
-        const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
-        const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
-        hr = CoCreateInstance(
-         CLSID_MMDeviceEnumerator, NULL,
-         CLSCTX_ALL, IID_IMMDeviceEnumerator,
-         (void**)&pEnumerator);
+    //bool scanAudioEndpoints(){
+    //    HRESULT hr= CoInitialize(nullptr);
+    //    if(hr!=ERROR_SUCCESS){
+    //        return false;
+    //    }
+    //    //create instance
+    //    IMMDeviceEnumerator * pEnumerator=nullptr;
+    //    const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
+    //    const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
+    //    hr = CoCreateInstance(
+    //     CLSID_MMDeviceEnumerator, NULL,
+    //     CLSCTX_ALL, IID_IMMDeviceEnumerator,
+    //     (void**)&pEnumerator);
 
-        if(hr!=ERROR_SUCCESS|| pEnumerator==nullptr){
-            return false;
-        }
+    //    if(hr!=ERROR_SUCCESS|| pEnumerator==nullptr){
+    //        return false;
+    //    }
 
-        EDataFlow audio_direction = eAll;//or eCapture, or eRender, or eAll
-        DWORD device_state_mask = DEVICE_STATE_ACTIVE; // or DEVICE_STATE_ACTIVE or DEVICE_STATE_DISABLED or DEVICE_STATE_NOTPRESENT or DEVICE_STATE_UNPLUGGED or everything DEVICE_STATEMASK_ALL.
-        IMMDeviceCollection * pDeviceCollection=nullptr;
-        hr = pEnumerator->EnumAudioEndpoints(audio_direction,device_state_mask,&pDeviceCollection);
-        if(hr!=ERROR_SUCCESS || pDeviceCollection==nullptr){
-            return false;
-        }
+    //    EDataFlow audio_direction = eAll;//or eCapture, or eRender, or eAll
+    //    DWORD device_state_mask = DEVICE_STATE_ACTIVE; // or DEVICE_STATE_ACTIVE or DEVICE_STATE_DISABLED or DEVICE_STATE_NOTPRESENT or DEVICE_STATE_UNPLUGGED or everything DEVICE_STATEMASK_ALL.
+    //    IMMDeviceCollection * pDeviceCollection=nullptr;
+    //    hr = pEnumerator->EnumAudioEndpoints(audio_direction,device_state_mask,&pDeviceCollection);
+    //    if(hr!=ERROR_SUCCESS || pDeviceCollection==nullptr){
+    //        return false;
+    //    }
 
-        unsigned count;
-        hr=pDeviceCollection->GetCount(&count);
-        if(hr!=ERROR_SUCCESS){
-            return false;
-        }
+    //    unsigned count;
+    //    hr=pDeviceCollection->GetCount(&count);
+    //    if(hr!=ERROR_SUCCESS){
+    //        return false;
+    //    }
 
-        for(unsigned i=0;i<count;i++){
-            IMMDevice * pDevice=nullptr;
-            // Get pointer to endpoint number i.
-            hr = pDeviceCollection->Item(i, &pDevice);
-            if(hr!=ERROR_SUCCESS || pDevice == nullptr){
-                return false;
-            }
-                    // Get the endpoint ID string.
-            LPWSTR  endpointidstring=nullptr;
-            hr = pDevice->GetId(&endpointidstring);
-            if(hr!=ERROR_SUCCESS || endpointidstring == nullptr){
-                return false;
-            }
-            IPropertyStore *pProps=nullptr;
-            hr = pDevice->OpenPropertyStore(
-                              STGM_READ, &pProps);
-            if(hr!=ERROR_SUCCESS || pProps == nullptr){
-                return false;
-            }
+    //    for(unsigned i=0;i<count;i++){
+    //        IMMDevice * pDevice=nullptr;
+    //        // Get pointer to endpoint number i.
+    //        hr = pDeviceCollection->Item(i, &pDevice);
+    //        if(hr!=ERROR_SUCCESS || pDevice == nullptr){
+    //            return false;
+    //        }
+    //                // Get the endpoint ID string.
+    //        LPWSTR  endpointidstring=nullptr;
+    //        hr = pDevice->GetId(&endpointidstring);
+    //        if(hr!=ERROR_SUCCESS || endpointidstring == nullptr){
+    //            return false;
+    //        }
+    //        IPropertyStore *pProps=nullptr;
+    //        hr = pDevice->OpenPropertyStore(
+    //                          STGM_READ, &pProps);
+    //        if(hr!=ERROR_SUCCESS || pProps == nullptr){
+    //            return false;
+    //        }
 
-            PROPVARIANT varName;
-            // Initialize container for property value.
-            PropVariantInit(&varName);
+    //        PROPVARIANT varName;
+    //        // Initialize container for property value.
+    //        PropVariantInit(&varName);
 
-            // Get the endpoint's friendly-name property.
-            hr = pProps->GetValue(PKEY_Device_FriendlyName, &varName);
-            if(hr!=ERROR_SUCCESS){
-                return false;
-            }
+    //        // Get the endpoint's friendly-name property.
+    //        hr = pProps->GetValue(PKEY_Device_FriendlyName, &varName);
+    //        if(hr!=ERROR_SUCCESS){
+    //            return false;
+    //        }
 
-            // Print endpoint friendly name and endpoint ID.
-            printf("Endpoint %d: \"%S\" (%S)\n",
-                   i, varName.pwszVal, endpointidstring);
+    //        // Print endpoint friendly name and endpoint ID.
+    //        printf("Endpoint %d: \"%S\" (%S)\n",
+    //               i, varName.pwszVal, endpointidstring);
 
-            CoTaskMemFree(endpointidstring);
-            PropVariantClear(&varName);
-            WIN_SAFE_RELEASE(pProps)
-            WIN_SAFE_RELEASE(pDevice);
-        }
+    //        CoTaskMemFree(endpointidstring);
+    //        PropVariantClear(&varName);
+    //        WIN_SAFE_RELEASE(pProps)
+    //        WIN_SAFE_RELEASE(pDevice);
+    //    }
 
 
-        //clean
-        WIN_SAFE_RELEASE( pDeviceCollection);
-        WIN_SAFE_RELEASE( pEnumerator);
-        return true;
-    }
+    //    //clean
+    //    WIN_SAFE_RELEASE( pDeviceCollection);
+    //    WIN_SAFE_RELEASE( pEnumerator);
+    //    return true;
+    //}
 }
 
 
@@ -168,7 +168,12 @@ namespace windows_helper{
             if(hr!=ERROR_SUCCESS || pDevice == nullptr){
                 windows_helper::getLastErrorMessage();
             }
-            push_back(audio_device(pDevice));
+			LPWSTR _id =nullptr;
+			hr = pDevice->GetId(&_id);
+			if(hr!=ERROR_SUCCESS)
+			{
+			}
+            push_back(audio_device(_id));
         }
 
 
@@ -178,8 +183,50 @@ namespace windows_helper{
         mInitialized = true;
     }
 
-    audio_device::audio_device(native_handle_type handle):pAudioClient(nullptr),hEvent(nullptr),mActive(false),pDeviceHandle(handle){
+    audio_device::audio_device(const audio_device::id& id):pAudioClient(nullptr),hEvent(nullptr),mActive(false),pDeviceHandle(nullptr),mId(id){
         mRunProcess.exchange(false);
+		
+		
+		//get the audio device really
+		
+		HRESULT hr= CoInitialize(nullptr);
+        //here hr could indicate that init is ok or that it was already initialized or a thread context changed ...
+
+        //create instance
+        IMMDeviceEnumerator * pEnumerator=nullptr;
+        const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
+        const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
+        hr = CoCreateInstance(
+         CLSID_MMDeviceEnumerator, NULL,
+         CLSCTX_ALL, IID_IMMDeviceEnumerator,
+         (void**)&pEnumerator);
+
+        if(hr!=ERROR_SUCCESS|| pEnumerator==nullptr){
+            windows_helper::getLastErrorMessage();
+        }
+
+        EDataFlow audio_direction = eAll;//or eCapture, or eRender, or eAll
+        DWORD device_state_mask = DEVICE_STATE_ACTIVE; // or DEVICE_STATE_ACTIVE or DEVICE_STATE_DISABLED or DEVICE_STATE_NOTPRESENT or DEVICE_STATE_UNPLUGGED or everything DEVICE_STATEMASK_ALL.
+        IMMDeviceCollection * pDeviceCollection=nullptr;
+        hr = pEnumerator->EnumAudioEndpoints(audio_direction,device_state_mask,&pDeviceCollection);
+        if(hr!=ERROR_SUCCESS || pDeviceCollection==nullptr){
+            windows_helper::getLastErrorMessage();
+        }
+		
+		hr = pEnumerator->GetDevice(mId.data(),&	pDeviceHandle);
+		if(hr != S_OK)
+		{
+			if(hr==E_POINTER)std::cout<<"Parameter pwstrId or ppDevice is NULL."<<std::endl;
+			else if (hr==E_NOTFOUND)std::cout<<"The device ID does not identify an audio device that is in this system."<<std::endl;
+			else if(hr==E_OUTOFMEMORY)std::cout<<"Out of memory."<<std::endl;
+			
+		}
+		
+        WIN_SAFE_RELEASE( pDeviceCollection);
+        WIN_SAFE_RELEASE( pEnumerator);
+
+
+
     }
     audio_device::audio_device(audio_device && d):pAudioClient(nullptr),mActive(false),pDeviceHandle(nullptr){
         std::swap(pDeviceHandle,d.pDeviceHandle);
@@ -197,8 +244,8 @@ namespace windows_helper{
         return initialize(format);
     }
     bool audio_device::initialize(const audio_format& format){
-        if(!is_valid())
-            return false;
+
+
         mFormat = format;   
         REFERENCE_TIME deviceperiod=0;
 
@@ -212,9 +259,16 @@ namespace windows_helper{
         const IID IID_IAudioClient = __uuidof(IAudioClient);
 
         HRESULT hr = pDeviceHandle->Activate(IID_IAudioClient,CLSCTX_ALL,nullptr,(void**) &pAudioClient);
-        if(hr!=ERROR_SUCCESS || pAudioClient == nullptr)
+        if(hr!=S_OK || pAudioClient == nullptr)
         {
-            windows_helper::getLastErrorMessage();
+            switch(hr)
+			{
+				case E_NOINTERFACE: std::cout<<"The object does not support the requested interface type."<<std::endl;break;
+				case E_POINTER : std::cout<<"Parameter ppInterface is NULL."<<std::endl;break;
+				case E_INVALIDARG : std::cout<<"The pActivationParams parameter must be NULL for the specified interface; or pActivationParams points to invalid data."<<std::endl;break;
+				case E_OUTOFMEMORY: std::cout<<"Out of memory."<<std::endl;break;
+				case AUDCLNT_E_DEVICE_INVALIDATED : std::cout<<"The user has removed either the audio endpoint device or the adapter device that the endpoint device connects to."<<std::endl;break;
+			}
         }
 
 //what is this for?
@@ -224,7 +278,13 @@ namespace windows_helper{
 
         if(hr!=S_OK|| pmixerformat == nullptr)
         {
-            windows_helper::getLastErrorMessage();
+            switch(hr)
+			{
+				case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+				case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
+				case E_POINTER:std::cout<<"Parameter ppDeviceFormat is NULL."<<std::endl;break;
+				case E_OUTOFMEMORY:std::cout<<"Out of memory."<<std::endl;break;
+			}
         }
 
 
@@ -237,7 +297,7 @@ namespace windows_helper{
         requestedformat.Format.nChannels = format.mChannelCount;
         requestedformat.Format.nSamplesPerSec = (int)( format.mSampleRate);
         requestedformat.Format.wBitsPerSample = format.sample_size() * 8;
-        requestedformat.Format.nAvgBytesPerSec = format.mChannelCount * format.sample_size() * format.mSampleRate;
+        requestedformat.Format.nAvgBytesPerSec = static_cast<int>(format.mChannelCount * format.sample_size() * format.mSampleRate);
         requestedformat.Format.wFormatTag=WAVE_FORMAT_IEEE_FLOAT;//  format.mSampleDataType==audio_sample_data_type::eFloat32? WAVE_FORMAT_IEEE_FLOAT:WAVE_FORMAT_PCM;
         requestedformat.SubFormat= format.mSampleDataType==audio_sample_data_type::eFloat32? KSDATAFORMAT_SUBTYPE_IEEE_FLOAT:KSDATAFORMAT_SUBTYPE_PCM; 
         requestedformat.Format.nBlockAlign=format.mChannelCount*format.sample_size();
@@ -258,8 +318,6 @@ namespace windows_helper{
 
 
         WAVEFORMATEXTENSIBLE * pnearestextensible = (WAVEFORMATEXTENSIBLE*)(*ppnearestformat);
-
-
 
 
         if(hr == S_OK)
@@ -284,20 +342,13 @@ namespace windows_helper{
             pacceptedformat = &requestedformat.Format;
         }else
         {
-            //ouch here we failed
-            if(hr == AUDCLNT_E_DEVICE_INVALIDATED)
-            {
-                //device not valid anymore
-            }else if(hr==AUDCLNT_E_SERVICE_NOT_RUNNING)
-            {
-                //?
-            }else if(hr=E_INVALIDARG)
-            {
-                //mode is not shared and not exclusive
-            }else{
-                //invalid call
-                //pointers to struct are 0
-            }
+            switch(hr)
+			{
+			case E_POINTER:std::cout<<"Parameter pFormat is NULL, or ppClosestMatch is NULL and ShareMode is AUDCLNT_SHAREMODE_SHARED."<<std::endl;break;
+			case E_INVALIDARG:std::cout<<"Parameter ShareMode is a value other than AUDCLNT_SHAREMODE_SHARED or AUDCLNT_SHAREMODE_EXCLUSIVE."<<std::endl;break;
+			case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+			case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
+			}
         }
         
         LPCGUID audio_session_guid = nullptr;
@@ -346,22 +397,27 @@ namespace windows_helper{
             if(hr!=S_OK){
                 switch(hr)
                 {
-                case AUDCLNT_E_ALREADY_INITIALIZED : break;
-                case AUDCLNT_E_WRONG_ENDPOINT_TYPE : break;
-                case AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED : break;//Starting with Windows 7, Initialize can return AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED  see http://msdn.microsoft.com/en-us/library/windows/desktop/dd370875%28v=vs.85%29.aspx
-                case AUDCLNT_E_BUFFER_SIZE_ERROR : break;
-                case AUDCLNT_E_CPUUSAGE_EXCEEDED : break;
-                case AUDCLNT_E_DEVICE_INVALIDATED : break;
-                case AUDCLNT_E_DEVICE_IN_USE : break;
-                case AUDCLNT_E_ENDPOINT_CREATE_FAILED : break;
-                case AUDCLNT_E_INVALID_DEVICE_PERIOD : break;
-                case AUDCLNT_E_UNSUPPORTED_FORMAT : break;
-                case AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED : break;
-                case AUDCLNT_E_BUFDURATION_PERIOD_NOT_EQUAL : break;//AUDCLNT_STREAMFLAGS_EVENTCALLBACK flag is set but parameters hnsBufferDuration and hnsPeriodicity are not equal.
-                case AUDCLNT_E_SERVICE_NOT_RUNNING : break;
-                case E_POINTER : break; //pformatisnull
-                case E_INVALIDARG : break;
-                case E_OUTOFMEMORY : break;
+				case AUDCLNT_E_ALREADY_INITIALIZED:std::cout<<"The IAudioClient object is already initialized."<<std::endl;break;
+				case AUDCLNT_E_WRONG_ENDPOINT_TYPE:std::cout<<"The  AUDCLNT_STREAMFLAGS_LOOPBACK flag is set but the endpoint device is a capture device, not a rendering device."<<std::endl;break;
+				case AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED:std::cout<<"Note  Applies to Windows 7 and later.\
+				The requested buffer size is not aligned. This code can be returned for a render or a capture device if the caller specified case AUDCLNT_SHAREMODE_EXCLUSIVE and the case AUDCLNT_STREAMFLAGS_EVENTCALLBACK flags. The caller must call Initialize again with the aligned buffer size. For more information, see Remarks."<<std::endl;break;
+				case AUDCLNT_E_BUFFER_SIZE_ERROR:std::cout<<"Note  Applies to Windows 7 and later.\
+				Indicates that the buffer duration value requested by an exclusive-mode client is out of range. The requested duration value for pull mode must not be greater than 500 milliseconds; for push mode the duration value must not be greater than 2 seconds."<<std::endl;break;
+				case AUDCLNT_E_CPUUSAGE_EXCEEDED:std::cout<<"Indicates that the process-pass duration exceeded the maximum CPU usage. The audio engine keeps track of CPU usage by maintaining the number of times the process-pass duration exceeds the maximum CPU usage. The maximum CPU usage is calculated as a percent of the engine's periodicity. The percentage value is the system's CPU throttle value (within the range of 10% and 90%). If this value is not found, then the default value of 40% is used to calculate the maximum CPU usage."<<std::endl;break;
+				case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+				case AUDCLNT_E_DEVICE_IN_USE:std::cout<<"The endpoint device is already in use. Either the device is being used in exclusive mode, or the device is being used in shared mode and the caller asked to use the device in exclusive mode."<<std::endl;break;
+				case AUDCLNT_E_ENDPOINT_CREATE_FAILED:std::cout<<"The method failed to create the audio endpoint for the render or the capture device. This can occur if the audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+				case AUDCLNT_E_INVALID_DEVICE_PERIOD:std::cout<<"Note  Applies to Windows 7 and later.\
+				Indicates that the device period requested by an exclusive-mode client is greater than 500 milliseconds."<<std::endl;break;
+				case AUDCLNT_E_UNSUPPORTED_FORMAT:std::cout<<"The audio engine (shared mode) or audio endpoint device (exclusive mode) does not support the specified format."<<std::endl;break;
+				case AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED:std::cout<<"The caller is requesting exclusive-mode use of the endpoint device, but the user has disabled exclusive-mode use of the device."<<std::endl;break;
+				case AUDCLNT_E_BUFDURATION_PERIOD_NOT_EQUAL:std::cout<<"The AUDCLNT_STREAMFLAGS_EVENTCALLBACK flag is set but parameters hnsBufferDuration and hnsPeriodicity are not equal."<<std::endl;break;
+				case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
+				case E_POINTER:std::cout<<"Parameter pFormat is NULL."<<std::endl;break;
+				case E_INVALIDARG:std::cout<<"\
+				Parameter pFormat points to an invalid format description; or the AUDCLNT_STREAMFLAGS_LOOPBACK flag is set but ShareMode is not equal to AUDCLNT_SHAREMODE_SHARED; or the case AUDCLNT_STREAMFLAGS_CROSSPROCESS flag is set but ShareMode is equal to case AUDCLNT_SHAREMODE_EXCLUSIVE.\
+				A prior call to SetClientProperties was made with an invalid category for audio/render streams."<<std::endl;break;
+				case E_OUTOFMEMORY:std::cout<<"Out of memory."<<std::endl;break;
                 default :
                     //unknown
                     break;
@@ -388,8 +444,14 @@ namespace windows_helper{
         HRESULT hr = pAudioClient->GetBufferSize(&buffersize);
         if(hr!=S_OK)
         {
-            windows_helper::getLastErrorMessage();
-            
+
+			switch(hr)
+			{
+				case AUDCLNT_E_NOT_INITIALIZED:std::cout<<"The audio stream has not been successfully initialized."<<std::endl;break;
+				case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+				case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
+				case E_POINTER:std::cout<<"Parameter pNumBufferFrames is NULL."<<std::endl;break;
+			}
 
         }
         return buffersize;
@@ -463,12 +525,18 @@ void audio_device::internal_process(){
     UINT32 bufferFrameCount=0;
 
     // Get the actual size of the allocated buffer.
-    hr = pAudioClient->GetBufferSize(&bufferFrameCount);
-    if(hr!=S_OK)
-    {
-        windows_helper::getLastErrorMessage();
-            
-    }
+        if(hr!=S_OK)
+        {
+
+			switch(hr)
+			{
+				case AUDCLNT_E_NOT_INITIALIZED:std::cout<<"The audio stream has not been successfully initialized."<<std::endl;break;
+				case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+				case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
+				case E_POINTER:std::cout<<"Parameter pNumBufferFrames is NULL."<<std::endl;break;
+			}
+
+        }
     
 
     DWORD flags = 0;    
@@ -579,22 +647,7 @@ void audio_device::internal_process(){
         mRunProcess.exchange(false);
         mFuture.wait();
     }
-    audio_device::id audio_device::get_id(){
-        if(pDeviceHandle==nullptr)
-            return id();
-        // Get the endpoint ID string.
-        LPWSTR  device_id=nullptr;
-        HRESULT hr = pDeviceHandle->GetId(&device_id);
-        if(hr!=S_OK || device_id == nullptr){
-            windows_helper::getLastErrorMessage();
-        }
-        return id( device_id);
-        CoTaskMemFree(device_id);
-
-    }
     std::wstring audio_device::name(){
-        if(!is_valid())
-            return std::wstring();
         IPropertyStore *pProps=nullptr;
         HRESULT hr = this->pDeviceHandle->OpenPropertyStore(
                           STGM_READ, &pProps);
