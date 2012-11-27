@@ -9,11 +9,12 @@ void process(audio_buffer &buff){
     std::cout<<std::this_thread::get_id()<<" : "<<count++<<std::endl;
     auto type=buff.mFormat.mSampleDataType;
     float * t=((float*)buff.mData);
-    const float f = 440./buff.mFormat.mSampleRate;
+    const float f = 220./buff.mFormat.mSampleRate;
     const float tierce = 5.f/4.f;
+    const float quinte = 3./2.;
     for(int i=0;i<buff.mSize;i++){
-        t[i*2] = sinf(phase);//interleaved
-        t[2*i+1] = sinf(phase * tierce);
+        const float res = sinf(phase);
+        t[i*2] = t[i*2+1] = res*.2;//interleaved
         phase+=M_2_PI*f;
         while(phase > M_2_PI)
             phase-=M_2_PI;
