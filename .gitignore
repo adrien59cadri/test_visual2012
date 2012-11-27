@@ -12,3 +12,4 @@
 *.ilk
 *.vlstatus
 *.unsuccessfulbuild
+*.xcuserstate
