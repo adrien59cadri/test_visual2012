@@ -16,10 +16,8 @@
 #include <array>
 #include <future>
 #include <atomic>
+#include "AudioDevice.h"
 
-namespace windows_helper{
-    bool scanAudioEndpoints();
-}
 enum class audio_direction{
     eInput,
     eOutput
@@ -135,7 +133,8 @@ private:
                     , const AudioBufferList* inInputData, const AudioTimeStamp* inInputTime, AudioBufferList * outOutData, const AudioTimeStamp * inOutputTime, void * inClientData);
     audio_device(const audio_device&);
     //native_handle_type pDeviceHandle;
-    AudioDeviceID mAudioDeviceId;
+
+    AudioDevice pAudioDevice;
     bool mActive;
     audio_format mFormat;
     audio_callback mCallback;

@@ -48,11 +48,11 @@ audio_device_collection::audio_device_collection(){
     }
 }
 
-audio_device::audio_device(AudioDeviceID id):mAudioDeviceId(id){
+audio_device::audio_device(AudioDeviceID id):pAudioDevice(id,false){
     
 }
 audio_device::audio_device(audio_device && d){
-    std::swap(mAudioDeviceId,d.mAudioDeviceId);
+    std::swap(pAudioDevice,d.pAudioDevice);
 }
 audio_device::~audio_device(){
     
@@ -60,7 +60,7 @@ audio_device::~audio_device(){
 //native_handle_type native_handle() const{return pDeviceHandle;}
 //! reurn the id of the audio device if initialized, or defaut if not
 audio_device::id audio_device::get_id(){
-    return mAudioDeviceId;
+    return pAudioDevice.mID;
 }
 //unsigned buffer_size();
 //std::chrono::nanoseconds period();
@@ -77,10 +77,10 @@ std::string audio_device::name(){
     thePropertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
     thePropertyAddress.mElement = kAudioObjectPropertyElementMaster;
     
-    result =AudioObjectGetPropertyData(mAudioDeviceId, &thePropertyAddress, 0, NULL, &thePropSize, &theDeviceName);
+    result =AudioObjectGetPropertyData(get_id(), &thePropertyAddress, 0, NULL, &thePropSize, &theDeviceName);
     if (result) { printf("Error in AudioObjectGetPropertyData: %d\n", result);
     }
-    AudioObjectGetPropertyData(mAudioDeviceId, &thePropertyAddress, 0, NULL, &thePropSize, &theDeviceName);
+    AudioObjectGetPropertyData(get_id(), &thePropertyAddress, 0, NULL, &thePropSize, &theDeviceName);
     auto charbuffersize = CFStringGetLength(theDeviceName)+1;
     auto charbuffer = new char[charbuffersize];
     auto test= CFStringGetCString(theDeviceName,charbuffer,charbuffersize, kCFStringEncodingASCII);
@@ -101,7 +101,7 @@ bool audio_device::initialize(){
 bool audio_device::set_callback(const audio_callback & inCallback){
     mCallback = inCallback;
     
-    OSStatus theError = AudioDeviceCreateIOProcID(mAudioDeviceId, audio_device::ioproc, this, &mIOProcID);
+    OSStatus theError = AudioDeviceCreateIOProcID(get_id(), audio_device::ioproc, this, &mIOProcID);
 }
 
 OSStatus audio_device::ioproc(AudioDeviceID inDevice, const AudioTimeStamp * inNow
@@ -115,10 +115,10 @@ OSStatus audio_device::ioproc(AudioDeviceID inDevice, const AudioTimeStamp * inN
     device->mCallback(buffer);
 }
 void audio_device::start(){
-    auto    theError = AudioDeviceStart(mAudioDeviceId, mIOProcID);
+    auto    theError = AudioDeviceStart(get_id(), mIOProcID);
     
 }
 void audio_device::stop(){
-    auto    theError = AudioDeviceStop(mAudioDeviceId, mIOProcID);
+    auto    theError = AudioDeviceStop(get_id(), mIOProcID);
 }
 
