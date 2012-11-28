@@ -163,7 +163,51 @@ std::string audio_device::name(){
 }
 
 bool audio_device::initialize(){
+    int bytesPerSample = 4;
+    AudioStreamBasicDescription stereoStreamFormat = {0};
+    //see Core Audio Format Specification
+    stereoStreamFormat.mFormatID          = kAudioFormatLinearPCM;
+    stereoStreamFormat.mFormatFlags       = kAudioFormatFlagsAudioUnitCanonical;
+    stereoStreamFormat.mChannelsPerFrame  = 2;           // 2 indicates stereo
+    stereoStreamFormat.mBitsPerChannel    = 8*bytesPerSample;
+    stereoStreamFormat.mBytesPerFrame     = stereoStreamFormat.mChannelsPerFrame * stereoStreamFormat.mBitsPerChannel / 8;
+    stereoStreamFormat.mFramesPerPacket   = 1;//because l;inear pcm this must be 1
+    stereoStreamFormat.mBytesPerPacket    = stereoStreamFormat.mFramesPerPacket*stereoStreamFormat.mBytesPerFrame ;
+    stereoStreamFormat.mSampleRate        = 48000.;
+    bool res = false;
+    {
+        
+        UInt32 propsize = sizeof(AudioStreamBasicDescription);
+        
+        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyStreamFormat,
+            mAudioDevice.mScope,
+            0 };
+        OSStatus err=AudioObjectSetPropertyData(get_id(),
+                                                &theAddress,
+                                                0,
+                                                NULL,propsize,
+                                                &stereoStreamFormat);
+        
+         res= (err==0);
+    }
+    
+	{
+        AudioStreamBasicDescription stereoStreamFormat = {0};
 
+        UInt32 propsize = sizeof(AudioStreamBasicDescription);
+        
+        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyStreamFormat,
+            mAudioDevice.mScope,
+            0 };
+        OSStatus err=AudioObjectGetPropertyData(get_id(),
+                                                &theAddress,
+                                                0,
+                                                NULL,
+                                                &propsize,
+                                                &stereoStreamFormat);
+        
+        assert(err==0);
+    }
 }
 
 bool audio_device::set_callback(const audio_callback & inCallback){

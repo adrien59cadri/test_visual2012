@@ -47,10 +47,61 @@
 
 #include "AudioDevice.h"
 
+#include <iostream>
+
+/*
+ * Translates MacOS generated errors into PaErrors
+ */
+const char * mac_osstatus_error(OSStatus error)
+{
+
+    const char * errorText = nullptr;
+    
+    switch (error) {
+        case kAudioHardwareNoError:
+            return nullptr;
+        case kAudioHardwareNotRunningError:
+            errorText = "Audio Hardware Not Running";
+            break;
+        case kAudioHardwareUnspecifiedError:
+            errorText = "Unspecified Audio Hardware Error";
+            break;
+        case kAudioHardwareUnknownPropertyError:
+            errorText = "Audio Hardware: Unknown Property";
+            break;
+        case kAudioHardwareBadPropertySizeError:
+            errorText = "Audio Hardware: Bad Property Size";
+            break;
+        case kAudioHardwareIllegalOperationError:
+            errorText = "Audio Hardware: Illegal Operation";
+            break;
+        case kAudioHardwareBadDeviceError:
+            errorText = "Audio Hardware: Bad Device";
+            break;
+        case kAudioHardwareBadStreamError:
+            errorText = "Audio Hardware: BadStream";
+            break;
+        case kAudioHardwareUnsupportedOperationError:
+            errorText = "Audio Hardware: Unsupported Operation";
+            break;
+        case kAudioDeviceUnsupportedFormatError:
+            errorText = "Audio Device: Unsupported Format";
+            break;
+        case kAudioDevicePermissionsError:
+            errorText = "Audio Device: Permissions Error";
+            break;
+        default:
+            errorText = "Unknown Error";
+    }
+        return errorText;
+}
+
+
+
 void	AudioDevice::Init(AudioDeviceID devid, AudioObjectPropertyScope theScope )
 {
 	mID = devid;
-    mIsInput  = theScope == kAudioDevicePropertyScopeInput ;
+    mScope = kAudioDevicePropertyScopeInput ;
 
 	if (mID == kAudioDeviceUnknown) return;
     {
@@ -71,13 +122,16 @@ void	AudioDevice::Init(AudioDeviceID devid, AudioObjectPropertyScope theScope )
                                                 &propsize,
                                                 &mSafetyOffset);
 
-        assert(err==0);
+        
+        if(err != noErr){
+            std::cout<<mac_osstatus_error(err);
+        }
 	}
     {
         UInt32 propsize = sizeof(UInt32);
-        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
+        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyBufferFrameSize,
             theScope,
-            kAudioDevicePropertyBufferFrameSize }; 
+            0 };
         
         OSStatus err=AudioObjectGetPropertyData(mID,
                                                 &theAddress,
@@ -86,15 +140,18 @@ void	AudioDevice::Init(AudioDeviceID devid, AudioObjectPropertyScope theScope )
                                                 &propsize,
                                                 &mBufferSizeFrames);
         
-        assert(err==0);
+        
+        if(err != noErr){
+            std::cout<<mac_osstatus_error(err);
+        }
     }
 	{
         
         UInt32 propsize = sizeof(AudioStreamBasicDescription);
             
-            AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
+            AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyStreamFormat,
                 theScope,
-                kAudioDevicePropertyStreamFormat };
+                0 };
         OSStatus err=AudioObjectGetPropertyData(mID,
                                                 &theAddress,
                                                 0,
@@ -102,7 +159,11 @@ void	AudioDevice::Init(AudioDeviceID devid, AudioObjectPropertyScope theScope )
                                                 &propsize,
                                                 &mFormat);
         
-        assert(err==0);
+
+        
+        if(err != noErr){
+            std::cout<<mac_osstatus_error(err);
+        }
     }
 }
 
@@ -111,20 +172,25 @@ void	AudioDevice::SetBufferSize(UInt32 size)
     
     UInt32 propsize = sizeof(UInt32);
         
-    AudioObjectPropertyScope theScope = mIsInput ? kAudioDevicePropertyScopeInput : kAudioDevicePropertyScopeOutput;
     
     AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyBufferFrameSize,
-                                              theScope,
+                                              mScope,
                                               0 }; // channel
                                               
     OSStatus err=AudioObjectSetPropertyData(mID, &theAddress, 0, NULL, propsize, &size);
     
-    assert(err==0);
+    
+    if(err != noErr){
+        std::cout<<mac_osstatus_error(err);
+    }
     
     
     err=AudioObjectGetPropertyData(mID, &theAddress, 0, NULL, &propsize, &mBufferSizeFrames);
     
-    assert(err==0);
+    
+    if(err != noErr){
+        std::cout<<mac_osstatus_error(err);
+    }
 }
 
 int		AudioDevice::CountChannels()
@@ -133,15 +199,17 @@ int		AudioDevice::CountChannels()
 	UInt32 propSize;
 	int result = 0;
     
-    AudioObjectPropertyScope theScope = mIsInput ? kAudioDevicePropertyScopeInput : kAudioDevicePropertyScopeOutput;
     
     AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyStreamConfiguration,
-                                              theScope,
+                                              mScope,
                                               0 }; // channel
 
     err = AudioObjectGetPropertyDataSize(mID, &theAddress, 0, NULL, &propSize);
-	if(err!=0)
+	
+    if(err != noErr){
+        std::cout<<mac_osstatus_error(err);
         return 0;
+    }
 
 	AudioBufferList *buflist = (AudioBufferList *)malloc(propSize);
     err = AudioObjectGetPropertyData(mID, &theAddress, 0, NULL, &propSize, buflist);
@@ -156,14 +224,16 @@ int		AudioDevice::CountChannels()
 
 char *	AudioDevice::GetName(char *buf, UInt32 maxlen)
 {
-    AudioObjectPropertyScope theScope = mIsInput ? kAudioDevicePropertyScopeInput : kAudioDevicePropertyScopeOutput;
     
     AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyDeviceName,
-                                              theScope,
+                                              mScope,
                                               0 }; // channel
 
     OSStatus err=AudioObjectGetPropertyData(mID, &theAddress, 0, NULL,  &maxlen, buf);
     
-    assert(err==0);
+    
+    if(err != noErr){
+        std::cout<<mac_osstatus_error(err);
+    }
 	return buf;
 }

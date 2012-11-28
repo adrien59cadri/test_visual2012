@@ -67,7 +67,7 @@ public:
 
 public:
 	AudioDeviceID					mID;
-	bool							mIsInput;
+	AudioObjectPropertyScope							mScope;
 	UInt32							mSafetyOffset;
 	UInt32							mBufferSizeFrames;
 	AudioStreamBasicDescription		mFormat;	
