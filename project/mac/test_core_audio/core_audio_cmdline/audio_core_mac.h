@@ -114,11 +114,11 @@ public:
     id get_id();
     //unsigned buffer_size();
     //std::chrono::nanoseconds period();
-    bool is_valid(){return id()!=get_id();}
+    bool valid(){return mAudioDevice.Valid();}
     std::string name();
     
     
-    
+
     //bool initialize(const audio_format & format);
     bool initialize();
     
@@ -134,7 +134,7 @@ private:
     audio_device(const audio_device&);
     //native_handle_type pDeviceHandle;
 
-    AudioDevice pAudioDevice;
+    AudioDevice mAudioDevice;
     bool mActive;
     audio_format mFormat;
     audio_callback mCallback;

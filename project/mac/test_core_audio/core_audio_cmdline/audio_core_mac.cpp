@@ -43,16 +43,84 @@ audio_device_collection::audio_device_collection(){
         }
         
         this->push_back(audio_device(theDeviceList[i]));
-        
+         
         CFRelease(theDeviceName);
     }
 }
 
-audio_device::audio_device(AudioDeviceID id):pAudioDevice(id,false){
-    
+audio_device::audio_device(AudioDeviceID id){
+    AudioObjectPropertyScope scope = 0;
+    bool try_another_scope = true;
+    {
+        
+        UInt32 propsize = sizeof(AudioStreamBasicDescription);
+        
+        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
+            kAudioDevicePropertyScopeInput,
+            kAudioDevicePropertyStreamFormat };
+        OSStatus err=AudioObjectGetPropertyData(id,
+                                                &theAddress,
+                                                0,
+                                                NULL,
+                                                &propsize,
+                                                &mFormat);
+        
+        if(err==0){
+            try_another_scope = false;
+            scope = kAudioDevicePropertyScopeInput;
+        }
+        
+    }
+    if(try_another_scope){
+        
+        
+        UInt32 propsize = sizeof(AudioStreamBasicDescription);
+        
+        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
+            kAudioDevicePropertyScopeOutput,
+            kAudioDevicePropertyStreamFormat };
+        OSStatus err=AudioObjectGetPropertyData(id,
+                                                &theAddress,
+                                                0,
+                                                NULL,
+                                                &propsize,
+                                                &mFormat);
+        
+        if(err==0){
+            try_another_scope = false;
+            scope = kAudioDevicePropertyScopeOutput;
+        }
+        
+        
+    }
+    if(try_another_scope){
+        
+        
+        UInt32 propsize = sizeof(AudioStreamBasicDescription);
+        
+        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
+            kAudioDevicePropertyScopePlayThrough,
+            kAudioDevicePropertyStreamFormat };
+        OSStatus err=AudioObjectGetPropertyData(id,
+                                                &theAddress,
+                                                0,
+                                                NULL,
+                                                &propsize,
+                                                &mFormat);
+        
+        if(err==0){
+            try_another_scope = false;
+            scope= kAudioDevicePropertyScopePlayThrough;
+        }
+        
+        
+    }
+    assert(!try_another_scope);
+    mAudioDevice.Init(id,scope);
+        
 }
 audio_device::audio_device(audio_device && d){
-    std::swap(pAudioDevice,d.pAudioDevice);
+    std::swap(mAudioDevice,d.mAudioDevice);
 }
 audio_device::~audio_device(){
     
@@ -60,7 +128,7 @@ audio_device::~audio_device(){
 //native_handle_type native_handle() const{return pDeviceHandle;}
 //! reurn the id of the audio device if initialized, or defaut if not
 audio_device::id audio_device::get_id(){
-    return pAudioDevice.mID;
+    return mAudioDevice.mID;
 }
 //unsigned buffer_size();
 //std::chrono::nanoseconds period();
@@ -105,7 +173,8 @@ bool audio_device::set_callback(const audio_callback & inCallback){
 }
 
 OSStatus audio_device::ioproc(AudioDeviceID inDevice, const AudioTimeStamp * inNow
-                , const AudioBufferList* inInputData, const AudioTimeStamp* inInputTime, AudioBufferList * outOutData, const AudioTimeStamp * inOutputTime, void * inClientData){
+                              ,const AudioBufferList* inInputData, const AudioTimeStamp* inInputTime
+                              ,AudioBufferList * outOutData, const AudioTimeStamp * inOutputTime, void * inClientData){
     auto device = reinterpret_cast<audio_device*>(inClientData);
     auto buffernb = outOutData->mNumberBuffers;
     auto channelsnb =outOutData->mBuffers[0].mNumberChannels;

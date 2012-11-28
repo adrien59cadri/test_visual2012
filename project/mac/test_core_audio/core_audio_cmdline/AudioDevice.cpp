@@ -47,51 +47,63 @@
 
 #include "AudioDevice.h"
 
-void	AudioDevice::Init(AudioDeviceID devid, bool isInput)
+void	AudioDevice::Init(AudioDeviceID devid, AudioObjectPropertyScope theScope )
 {
 	mID = devid;
-	mIsInput = isInput;
+    mIsInput  = theScope == kAudioDevicePropertyScopeInput ;
+
 	if (mID == kAudioDeviceUnknown) return;
-  
-    UInt32 propsize = sizeof(Float32);
-    
-    AudioObjectPropertyScope theScope = mIsInput ? kAudioDevicePropertyScopeInput : kAudioDevicePropertyScopeOutput;
-    
-    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
-                                              theScope,
-                                              0 }; // channel
+    {
+        UInt32 propsize = sizeof(Float32);
+        
+        
+        
+        
+        
+        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
+                                                  theScope,
+                                                  0 }; // channel
 
-    OSStatus err=AudioObjectGetPropertyData(mID,
-                                            &theAddress,
-                                            0,
-                                            NULL,
-                                            &propsize,
-                                            &mSafetyOffset);
+        OSStatus err=AudioObjectGetPropertyData(mID,
+                                                &theAddress,
+                                                0,
+                                                NULL,
+                                                &propsize,
+                                                &mSafetyOffset);
 
-    assert(err==0);
-	
-	propsize = sizeof(UInt32);
-    theAddress.mSelector = kAudioDevicePropertyBufferFrameSize;
-    
-    err=AudioObjectGetPropertyData(mID,
-                                            &theAddress,
-                                            0,
-                                            NULL,
-                                            &propsize,
-                                            &mBufferSizeFrames);
-	
-    assert(err==0);
-	propsize = sizeof(AudioStreamBasicDescription);
-    theAddress.mSelector = kAudioDevicePropertyStreamFormat;
-    
-    err=AudioObjectGetPropertyData(mID,
-                                            &theAddress,
-                                            0,
-                                            NULL,
-                                            &propsize,
-                                            &mFormat);
-    
-    assert(err==0);
+        assert(err==0);
+	}
+    {
+        UInt32 propsize = sizeof(UInt32);
+        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
+            theScope,
+            kAudioDevicePropertyBufferFrameSize }; 
+        
+        OSStatus err=AudioObjectGetPropertyData(mID,
+                                                &theAddress,
+                                                0,
+                                                NULL,
+                                                &propsize,
+                                                &mBufferSizeFrames);
+        
+        assert(err==0);
+    }
+	{
+        
+        UInt32 propsize = sizeof(AudioStreamBasicDescription);
+            
+            AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
+                theScope,
+                kAudioDevicePropertyStreamFormat };
+        OSStatus err=AudioObjectGetPropertyData(mID,
+                                                &theAddress,
+                                                0,
+                                                NULL,
+                                                &propsize,
+                                                &mFormat);
+        
+        assert(err==0);
+    }
 }
 
 void	AudioDevice::SetBufferSize(UInt32 size)

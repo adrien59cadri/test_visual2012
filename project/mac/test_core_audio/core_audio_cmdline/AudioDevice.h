@@ -54,9 +54,9 @@
 class AudioDevice {
 public:
 	AudioDevice() : mID(kAudioDeviceUnknown) { }
-	AudioDevice(AudioDeviceID devid, bool isInput) { Init(devid, isInput); }
+	AudioDevice(AudioDeviceID devid, AudioObjectPropertyScope scope) { Init(devid, scope); }
 
-	void	Init(AudioDeviceID devid, bool isInput);
+	void	Init(AudioDeviceID devid, AudioObjectPropertyScope scope);
 	
 	bool	Valid() { return mID != kAudioDeviceUnknown; }
 	

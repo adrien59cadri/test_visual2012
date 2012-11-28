@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 //            std::cout<<"echec initialize()"<<std::endl;
 //
 //        std::wcout<<"buffer size : "<<device.buffer_size()<<" period : "<<device.period().count()<<" ns"<<std::endl;
-       device.set_callback(process);
+        device.set_callback(process);
         device.start();
 //
 //        
