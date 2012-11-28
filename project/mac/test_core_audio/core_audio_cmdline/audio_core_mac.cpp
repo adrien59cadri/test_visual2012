@@ -158,6 +158,7 @@ std::string audio_device::name(){
         
     }
     std::string name(charbuffer);
+    delete [] charbuffer;
     CFRelease(theDeviceName);
     return name;
 }
@@ -174,39 +175,58 @@ bool audio_device::initialize(){
     stereoStreamFormat.mFramesPerPacket   = 1;//because l;inear pcm this must be 1
     stereoStreamFormat.mBytesPerPacket    = stereoStreamFormat.mFramesPerPacket*stereoStreamFormat.mBytesPerFrame ;
     stereoStreamFormat.mSampleRate        = 48000.;
-    bool res = false;
-    {
-        
-        UInt32 propsize = sizeof(AudioStreamBasicDescription);
-        
-        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyStreamFormat,
-            mAudioDevice.mScope,
-            0 };
-        OSStatus err=AudioObjectSetPropertyData(get_id(),
-                                                &theAddress,
-                                                0,
-                                                NULL,propsize,
-                                                &stereoStreamFormat);
-        
-         res= (err==0);
-    }
     
-	{
-        AudioStreamBasicDescription stereoStreamFormat = {0};
-
-        UInt32 propsize = sizeof(AudioStreamBasicDescription);
+    
+    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyStreams,
+        kAudioDevicePropertyScopeInput,
+        kAudioObjectPropertyElementMaster };
+    
+    // StreamListenerBlock is called whenever the sample rate changes (as well as other format characteristics of the device)
+	UInt32 propSize;
+	OSStatus err = AudioObjectGetPropertyDataSize(get_id(), &theAddress, 0, NULL, &propSize);
+    if (err) fprintf(stderr, "Error %ld returned from AudioObjectGetPropertyDataSize\n", (long)err);
+    
+	if(!err) {
         
-        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyStreamFormat,
-            mAudioDevice.mScope,
-            0 };
-        OSStatus err=AudioObjectGetPropertyData(get_id(),
-                                                &theAddress,
-                                                0,
-                                                NULL,
-                                                &propsize,
-                                                &stereoStreamFormat);
+		AudioStreamID *streams = (AudioStreamID*)malloc(propSize);
+		err = AudioObjectGetPropertyData(get_id(), &theAddress, 0, NULL, &propSize, streams);
+        if (err) fprintf(stderr, "Error %ld returned from AudioObjectGetPropertyData\n", (long)err);
         
-        assert(err==0);
+		if(!err) {
+			UInt32 numStreams = propSize / sizeof(AudioStreamID);
+			
+            for(UInt32 i=0; i < numStreams; i++) {
+				UInt32 isInput;
+				propSize = sizeof(UInt32);
+                theAddress.mSelector = kAudioStreamPropertyDirection;
+                theAddress.mScope = kAudioObjectPropertyScopeGlobal;
+				
+                err = AudioObjectGetPropertyData(streams[i], &theAddress, 0, NULL, &propSize, &isInput);
+                if (err) fprintf(stderr, "Error %ld returned from AudioObjectGetPropertyData\n", (long)err);
+                
+                std::cout<<"is input "<<isInput<<std::endl;
+                
+                
+                AudioStreamRangedDescription * formats = nullptr;
+                
+                theAddress.mSelector= kAudioStreamPropertyAvailablePhysicalFormats;
+                err = AudioObjectGetPropertyDataSize(streams[i],&theAddress,0,nullptr,&propSize);
+                if (err) fprintf(stderr, "Error %ld returned from AudioObjectGetPropertyDataSize\n", (long)err);
+                
+                int nbformats = propSize/sizeof(AudioStreamRangedDescription);
+                formats = new AudioStreamRangedDescription[nbformats];
+                err = AudioObjectGetPropertyData(streams[i], &theAddress, 0, NULL, &propSize, streams);
+                if (err) fprintf(stderr, "Error %ld returned from AudioObjectGetPropertyData\n", (long)err);
+                
+                for(int j=0;j<nbformats;j++){
+                    formats[j].mFormat;
+                }
+                
+                delete [] formats;
+            }
+        }
+        
+        if (NULL != streams) free(streams);
     }
 }
 

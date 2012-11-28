@@ -60,17 +60,17 @@ public:
 	
 	bool	Valid() { return mID != kAudioDeviceUnknown; }
 	
-	void	SetBufferSize(UInt32 size);
+	//void	SetBufferSize(UInt32 size);
 	
-	int		CountChannels();
-	char *	GetName(char *buf, UInt32 maxlen);
+	//int		CountChannels();
+	//char *	GetName(char *buf, UInt32 maxlen);
 
 public:
 	AudioDeviceID					mID;
 	AudioObjectPropertyScope							mScope;
-	UInt32							mSafetyOffset;
-	UInt32							mBufferSizeFrames;
-	AudioStreamBasicDescription		mFormat;	
+	//UInt32							mSafetyOffset;
+	//UInt32							mBufferSizeFrames;
+	//AudioStreamBasicDescription		mFormat;
 };
 
 
