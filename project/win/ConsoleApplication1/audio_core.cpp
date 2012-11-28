@@ -42,85 +42,7 @@ namespace windows_helper{
             0, NULL );
         std::cout<<std::endl<<"error msg : "<<lpMsgBuf<<std::endl;
         LocalFree(lpMsgBuf);
-    }
-    //bool scanAudioEndpoints(){
-    //    HRESULT hr= CoInitialize(nullptr);
-    //    if(hr!=ERROR_SUCCESS){
-    //        return false;
-    //    }
-    //    //create instance
-    //    IMMDeviceEnumerator * pEnumerator=nullptr;
-    //    const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
-    //    const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
-    //    hr = CoCreateInstance(
-    //     CLSID_MMDeviceEnumerator, NULL,
-    //     CLSCTX_ALL, IID_IMMDeviceEnumerator,
-    //     (void**)&pEnumerator);
-
-    //    if(hr!=ERROR_SUCCESS|| pEnumerator==nullptr){
-    //        return false;
-    //    }
-
-    //    EDataFlow audio_direction = eAll;//or eCapture, or eRender, or eAll
-    //    DWORD device_state_mask = DEVICE_STATE_ACTIVE; // or DEVICE_STATE_ACTIVE or DEVICE_STATE_DISABLED or DEVICE_STATE_NOTPRESENT or DEVICE_STATE_UNPLUGGED or everything DEVICE_STATEMASK_ALL.
-    //    IMMDeviceCollection * pDeviceCollection=nullptr;
-    //    hr = pEnumerator->EnumAudioEndpoints(audio_direction,device_state_mask,&pDeviceCollection);
-    //    if(hr!=ERROR_SUCCESS || pDeviceCollection==nullptr){
-    //        return false;
-    //    }
-
-    //    unsigned count;
-    //    hr=pDeviceCollection->GetCount(&count);
-    //    if(hr!=ERROR_SUCCESS){
-    //        return false;
-    //    }
-
-    //    for(unsigned i=0;i<count;i++){
-    //        IMMDevice * pDevice=nullptr;
-    //        // Get pointer to endpoint number i.
-    //        hr = pDeviceCollection->Item(i, &pDevice);
-    //        if(hr!=ERROR_SUCCESS || pDevice == nullptr){
-    //            return false;
-    //        }
-    //                // Get the endpoint ID string.
-    //        LPWSTR  endpointidstring=nullptr;
-    //        hr = pDevice->GetId(&endpointidstring);
-    //        if(hr!=ERROR_SUCCESS || endpointidstring == nullptr){
-    //            return false;
-    //        }
-    //        IPropertyStore *pProps=nullptr;
-    //        hr = pDevice->OpenPropertyStore(
-    //                          STGM_READ, &pProps);
-    //        if(hr!=ERROR_SUCCESS || pProps == nullptr){
-    //            return false;
-    //        }
-
-    //        PROPVARIANT varName;
-    //        // Initialize container for property value.
-    //        PropVariantInit(&varName);
-
-    //        // Get the endpoint's friendly-name property.
-    //        hr = pProps->GetValue(PKEY_Device_FriendlyName, &varName);
-    //        if(hr!=ERROR_SUCCESS){
-    //            return false;
-    //        }
-
-    //        // Print endpoint friendly name and endpoint ID.
-    //        printf("Endpoint %d: \"%S\" (%S)\n",
-    //               i, varName.pwszVal, endpointidstring);
-
-    //        CoTaskMemFree(endpointidstring);
-    //        PropVariantClear(&varName);
-    //        WIN_SAFE_RELEASE(pProps)
-    //        WIN_SAFE_RELEASE(pDevice);
-    //    }
-
-
-    //    //clean
-    //    WIN_SAFE_RELEASE( pDeviceCollection);
-    //    WIN_SAFE_RELEASE( pEnumerator);
-    //    return true;
-    //}
+	}
 }
 
 
@@ -183,7 +105,7 @@ namespace windows_helper{
         mInitialized = true;
     }
 
-    audio_device::audio_device(const audio_device::id& id):pAudioClient(nullptr),hEvent(nullptr),mActive(false),pDeviceHandle(nullptr),mId(id){
+    audio_device::audio_device(const audio_device::id& id):pAudioClient(nullptr),mInitialized(false),hEvent(nullptr),mActive(false),pDeviceHandle(nullptr),mId(id){
         mRunProcess.exchange(false);
 		
 		
@@ -228,12 +150,19 @@ namespace windows_helper{
 
 
     }
-    audio_device::audio_device(audio_device && d):pAudioClient(nullptr),mActive(false),pDeviceHandle(nullptr){
+    audio_device::audio_device(audio_device && d){
         std::swap(pDeviceHandle,d.pDeviceHandle);
         std::swap(pAudioClient,d.pAudioClient);
         std::swap(mFormat,d.mFormat);
         std::swap(mActive,d.mActive);
 		std::swap(mId,d.mId);
+		std::swap(mInitialized,d.mInitialized);
+		std::swap(mCallback,d.mCallback);
+		std::swap(hEvent,d.hEvent);
+		std::swap(mDeviceModeIsExclusive, d.mDeviceModeIsExclusive);
+		//!note, moving can not be atomic, so this is a non sens if the future is set or is the runprocess flag is set we should not authorize the move
+		mRunProcess = d.mRunProcess;
+		std::swap(mFuture,d.mFuture);
     }
     
     bool audio_device::initialize(){
@@ -245,7 +174,7 @@ namespace windows_helper{
         return initialize(format);
     }
     bool audio_device::initialize(const audio_format& format){
-
+		mInitialized = false;
 
         mFormat = format;   
         REFERENCE_TIME deviceperiod=0;
@@ -435,8 +364,8 @@ namespace windows_helper{
             CoTaskMemFree(pnearestformat);
 
         mDeviceModeIsExclusive = mode == AUDCLNT_SHAREMODE_EXCLUSIVE;
-
-        return true;
+		mInitialized = true;
+        return mInitialized;
     }
     unsigned audio_device::buffer_size(){
         if(!is_initialized())

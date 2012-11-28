@@ -123,8 +123,9 @@ public:
     std::wstring name();
 
 
-    
+    //! to specify a format when you initialize a device
     bool initialize(const audio_format & format);
+	//! defaut initialize
     bool initialize();
 
     bool set_callback(const audio_callback & inCallback);
@@ -132,7 +133,7 @@ public:
     void start();
     void stop();
 
-    bool is_initialized()const {return pDeviceHandle!=nullptr && pAudioClient!=nullptr;}
+    bool is_initialized()const {return mInitialized;}
 private:
     void internal_process();
     audio_device(const audio_device&);
@@ -145,6 +146,7 @@ private:
     std::future<void> mFuture;
     std::atomic_bool mRunProcess;
     HANDLE hEvent;
+	bool mInitialized;
     bool mDeviceModeIsExclusive;
 };
 
