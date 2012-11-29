@@ -1,7 +1,7 @@
 #Audio device simple lib
 
 ##intro
-This small project aims to be a very simple way to use audio devices on Mac OSX(using Core Audio), Winows (using  WASAPI) and linux (ALSA).
+This small project aims to be a very simple way to use audio devices on Mac OSX(using Core Audio), Windows (using  WASAPI) and linux (ALSA).
 I don't want to support other APIs like DirectX or OSS because I just want to tale the best of each system for low latency audio. I don't want to be compatible with libraries like ASIO, PortAudio, JACK (...) because this would be oo much work, and obviously those systems are based on operating system's APIs and the latency would not be better.
 
 ##motivation
