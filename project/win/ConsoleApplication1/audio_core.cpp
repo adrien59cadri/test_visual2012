@@ -42,7 +42,7 @@ namespace windows_helper{
             0, NULL );
         std::cout<<std::endl<<"error msg : "<<lpMsgBuf<<std::endl;
         LocalFree(lpMsgBuf);
-	}
+    }
 }
 
 
@@ -90,12 +90,12 @@ namespace windows_helper{
             if(hr!=ERROR_SUCCESS || pDevice == nullptr){
                 windows_helper::getLastErrorMessage();
             }
-			LPWSTR _id =nullptr;
-			hr = pDevice->GetId(&_id);
-			if(hr!=ERROR_SUCCESS)
-			{
-			}
-            push_back(audio_device(_id));
+            LPWSTR _id =nullptr;
+            hr = pDevice->GetId(&_id);
+            if(hr!=ERROR_SUCCESS)
+            {
+            }
+            push_back(audio_device(audio_device::id(_id)));
         }
 
 
@@ -104,14 +104,14 @@ namespace windows_helper{
         WIN_SAFE_RELEASE( pEnumerator);
         mInitialized = true;
     }
-
+    audio_device::audio_device():pAudioClient(nullptr),mInitialized(false),hEvent(nullptr),mActive(false),pDeviceHandle(nullptr) {}
     audio_device::audio_device(const audio_device::id& id):pAudioClient(nullptr),mInitialized(false),hEvent(nullptr),mActive(false),pDeviceHandle(nullptr),mId(id){
         mRunProcess.exchange(false);
-		
-		
-		//get the audio device really
-		
-		HRESULT hr= CoInitialize(nullptr);
+        
+        
+        //get the audio device really
+        
+        HRESULT hr= CoInitialize(nullptr);
         //here hr could indicate that init is ok or that it was already initialized or a thread context changed ...
 
         //create instance
@@ -134,16 +134,19 @@ namespace windows_helper{
         if(hr!=ERROR_SUCCESS || pDeviceCollection==nullptr){
             windows_helper::getLastErrorMessage();
         }
-		
-		hr = pEnumerator->GetDevice(mId.data(),&	pDeviceHandle);
-		if(hr != S_OK)
-		{
-			if(hr==E_POINTER)std::cout<<"Parameter pwstrId or ppDevice is NULL."<<std::endl;
-			else if (hr==E_NOTFOUND)std::cout<<"The device ID does not identify an audio device that is in this system."<<std::endl;
-			else if(hr==E_OUTOFMEMORY)std::cout<<"Out of memory."<<std::endl;
-			
-		}
-		
+        
+        hr = pEnumerator->GetDevice(mId.data(),&	pDeviceHandle);
+        if(hr != S_OK)
+        {
+            if(hr==E_POINTER)std::cout<<"Parameter pwstrId or ppDevice is NULL."<<std::endl;
+            else if (hr==E_NOTFOUND){
+                mId.clear();//if device not found we clear the id
+                std::cout<<"The device ID does not identify an audio device that is in this system."<<std::endl;
+            }
+            else if(hr==E_OUTOFMEMORY)std::cout<<"Out of memory."<<std::endl;
+            
+        }
+        
         WIN_SAFE_RELEASE( pDeviceCollection);
         WIN_SAFE_RELEASE( pEnumerator);
 
@@ -155,14 +158,20 @@ namespace windows_helper{
         std::swap(pAudioClient,d.pAudioClient);
         std::swap(mFormat,d.mFormat);
         std::swap(mActive,d.mActive);
-		std::swap(mId,d.mId);
-		std::swap(mInitialized,d.mInitialized);
-		std::swap(mCallback,d.mCallback);
-		std::swap(hEvent,d.hEvent);
-		std::swap(mDeviceModeIsExclusive, d.mDeviceModeIsExclusive);
-		//!note, moving can not be atomic, so this is a non sens if the future is set or is the runprocess flag is set we should not authorize the move
-		mRunProcess = d.mRunProcess;
-		std::swap(mFuture,d.mFuture);
+        std::swap(mId,d.mId);
+        std::swap(mInitialized,d.mInitialized);
+        std::swap(mCallback,d.mCallback);
+        std::swap(hEvent,d.hEvent);
+        std::swap(mDeviceModeIsExclusive, d.mDeviceModeIsExclusive);
+        //!note, moving can not be atomic, so this is a non sens if the future is set or is the runprocess flag is set we should not authorize the move
+        mRunProcess = d.mRunProcess;
+        std::swap(mFuture,d.mFuture);
+        d.pDeviceHandle = nullptr;
+        d.pAudioClient = nullptr;
+        d.hEvent = nullptr;
+        d.mActive = false;
+        d.mInitialized = false;
+        d.mId.clear();
     }
     
     bool audio_device::initialize(){
@@ -174,7 +183,7 @@ namespace windows_helper{
         return initialize(format);
     }
     bool audio_device::initialize(const audio_format& format){
-		mInitialized = false;
+        mInitialized = false;
 
         mFormat = format;   
         REFERENCE_TIME deviceperiod=0;
@@ -192,13 +201,13 @@ namespace windows_helper{
         if(hr!=S_OK || pAudioClient == nullptr)
         {
             switch(hr)
-			{
-				case E_NOINTERFACE: std::cout<<"The object does not support the requested interface type."<<std::endl;break;
-				case E_POINTER : std::cout<<"Parameter ppInterface is NULL."<<std::endl;break;
-				case E_INVALIDARG : std::cout<<"The pActivationParams parameter must be NULL for the specified interface; or pActivationParams points to invalid data."<<std::endl;break;
-				case E_OUTOFMEMORY: std::cout<<"Out of memory."<<std::endl;break;
-				case AUDCLNT_E_DEVICE_INVALIDATED : std::cout<<"The user has removed either the audio endpoint device or the adapter device that the endpoint device connects to."<<std::endl;break;
-			}
+            {
+                case E_NOINTERFACE: std::cout<<"The object does not support the requested interface type."<<std::endl;break;
+                case E_POINTER : std::cout<<"Parameter ppInterface is NULL."<<std::endl;break;
+                case E_INVALIDARG : std::cout<<"The pActivationParams parameter must be NULL for the specified interface; or pActivationParams points to invalid data."<<std::endl;break;
+                case E_OUTOFMEMORY: std::cout<<"Out of memory."<<std::endl;break;
+                case AUDCLNT_E_DEVICE_INVALIDATED : std::cout<<"The user has removed either the audio endpoint device or the adapter device that the endpoint device connects to."<<std::endl;break;
+            }
         }
 
 //what is this for?
@@ -209,12 +218,12 @@ namespace windows_helper{
         if(hr!=S_OK|| pmixerformat == nullptr)
         {
             switch(hr)
-			{
-				case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
-				case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
-				case E_POINTER:std::cout<<"Parameter ppDeviceFormat is NULL."<<std::endl;break;
-				case E_OUTOFMEMORY:std::cout<<"Out of memory."<<std::endl;break;
-			}
+            {
+                case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+                case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
+                case E_POINTER:std::cout<<"Parameter ppDeviceFormat is NULL."<<std::endl;break;
+                case E_OUTOFMEMORY:std::cout<<"Out of memory."<<std::endl;break;
+            }
         }
 
 
@@ -273,12 +282,12 @@ namespace windows_helper{
         }else
         {
             switch(hr)
-			{
-			case E_POINTER:std::cout<<"Parameter pFormat is NULL, or ppClosestMatch is NULL and ShareMode is AUDCLNT_SHAREMODE_SHARED."<<std::endl;break;
-			case E_INVALIDARG:std::cout<<"Parameter ShareMode is a value other than AUDCLNT_SHAREMODE_SHARED or AUDCLNT_SHAREMODE_EXCLUSIVE."<<std::endl;break;
-			case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
-			case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
-			}
+            {
+            case E_POINTER:std::cout<<"Parameter pFormat is NULL, or ppClosestMatch is NULL and ShareMode is AUDCLNT_SHAREMODE_SHARED."<<std::endl;break;
+            case E_INVALIDARG:std::cout<<"Parameter ShareMode is a value other than AUDCLNT_SHAREMODE_SHARED or AUDCLNT_SHAREMODE_EXCLUSIVE."<<std::endl;break;
+            case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+            case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
+            }
         }
         
         LPCGUID audio_session_guid = nullptr;
@@ -327,27 +336,27 @@ namespace windows_helper{
             if(hr!=S_OK){
                 switch(hr)
                 {
-				case AUDCLNT_E_ALREADY_INITIALIZED:std::cout<<"The IAudioClient object is already initialized."<<std::endl;break;
-				case AUDCLNT_E_WRONG_ENDPOINT_TYPE:std::cout<<"The  AUDCLNT_STREAMFLAGS_LOOPBACK flag is set but the endpoint device is a capture device, not a rendering device."<<std::endl;break;
-				case AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED:std::cout<<"Note  Applies to Windows 7 and later.\
-				The requested buffer size is not aligned. This code can be returned for a render or a capture device if the caller specified case AUDCLNT_SHAREMODE_EXCLUSIVE and the case AUDCLNT_STREAMFLAGS_EVENTCALLBACK flags. The caller must call Initialize again with the aligned buffer size. For more information, see Remarks."<<std::endl;break;
-				case AUDCLNT_E_BUFFER_SIZE_ERROR:std::cout<<"Note  Applies to Windows 7 and later.\
-				Indicates that the buffer duration value requested by an exclusive-mode client is out of range. The requested duration value for pull mode must not be greater than 500 milliseconds; for push mode the duration value must not be greater than 2 seconds."<<std::endl;break;
-				case AUDCLNT_E_CPUUSAGE_EXCEEDED:std::cout<<"Indicates that the process-pass duration exceeded the maximum CPU usage. The audio engine keeps track of CPU usage by maintaining the number of times the process-pass duration exceeds the maximum CPU usage. The maximum CPU usage is calculated as a percent of the engine's periodicity. The percentage value is the system's CPU throttle value (within the range of 10% and 90%). If this value is not found, then the default value of 40% is used to calculate the maximum CPU usage."<<std::endl;break;
-				case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
-				case AUDCLNT_E_DEVICE_IN_USE:std::cout<<"The endpoint device is already in use. Either the device is being used in exclusive mode, or the device is being used in shared mode and the caller asked to use the device in exclusive mode."<<std::endl;break;
-				case AUDCLNT_E_ENDPOINT_CREATE_FAILED:std::cout<<"The method failed to create the audio endpoint for the render or the capture device. This can occur if the audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
-				case AUDCLNT_E_INVALID_DEVICE_PERIOD:std::cout<<"Note  Applies to Windows 7 and later.\
-				Indicates that the device period requested by an exclusive-mode client is greater than 500 milliseconds."<<std::endl;break;
-				case AUDCLNT_E_UNSUPPORTED_FORMAT:std::cout<<"The audio engine (shared mode) or audio endpoint device (exclusive mode) does not support the specified format."<<std::endl;break;
-				case AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED:std::cout<<"The caller is requesting exclusive-mode use of the endpoint device, but the user has disabled exclusive-mode use of the device."<<std::endl;break;
-				case AUDCLNT_E_BUFDURATION_PERIOD_NOT_EQUAL:std::cout<<"The AUDCLNT_STREAMFLAGS_EVENTCALLBACK flag is set but parameters hnsBufferDuration and hnsPeriodicity are not equal."<<std::endl;break;
-				case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
-				case E_POINTER:std::cout<<"Parameter pFormat is NULL."<<std::endl;break;
-				case E_INVALIDARG:std::cout<<"\
-				Parameter pFormat points to an invalid format description; or the AUDCLNT_STREAMFLAGS_LOOPBACK flag is set but ShareMode is not equal to AUDCLNT_SHAREMODE_SHARED; or the case AUDCLNT_STREAMFLAGS_CROSSPROCESS flag is set but ShareMode is equal to case AUDCLNT_SHAREMODE_EXCLUSIVE.\
-				A prior call to SetClientProperties was made with an invalid category for audio/render streams."<<std::endl;break;
-				case E_OUTOFMEMORY:std::cout<<"Out of memory."<<std::endl;break;
+                case AUDCLNT_E_ALREADY_INITIALIZED:std::cout<<"The IAudioClient object is already initialized."<<std::endl;break;
+                case AUDCLNT_E_WRONG_ENDPOINT_TYPE:std::cout<<"The  AUDCLNT_STREAMFLAGS_LOOPBACK flag is set but the endpoint device is a capture device, not a rendering device."<<std::endl;break;
+                case AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED:std::cout<<"Note  Applies to Windows 7 and later.\
+                The requested buffer size is not aligned. This code can be returned for a render or a capture device if the caller specified case AUDCLNT_SHAREMODE_EXCLUSIVE and the case AUDCLNT_STREAMFLAGS_EVENTCALLBACK flags. The caller must call Initialize again with the aligned buffer size. For more information, see Remarks."<<std::endl;break;
+                case AUDCLNT_E_BUFFER_SIZE_ERROR:std::cout<<"Note  Applies to Windows 7 and later.\
+                Indicates that the buffer duration value requested by an exclusive-mode client is out of range. The requested duration value for pull mode must not be greater than 500 milliseconds; for push mode the duration value must not be greater than 2 seconds."<<std::endl;break;
+                case AUDCLNT_E_CPUUSAGE_EXCEEDED:std::cout<<"Indicates that the process-pass duration exceeded the maximum CPU usage. The audio engine keeps track of CPU usage by maintaining the number of times the process-pass duration exceeds the maximum CPU usage. The maximum CPU usage is calculated as a percent of the engine's periodicity. The percentage value is the system's CPU throttle value (within the range of 10% and 90%). If this value is not found, then the default value of 40% is used to calculate the maximum CPU usage."<<std::endl;break;
+                case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+                case AUDCLNT_E_DEVICE_IN_USE:std::cout<<"The endpoint device is already in use. Either the device is being used in exclusive mode, or the device is being used in shared mode and the caller asked to use the device in exclusive mode."<<std::endl;break;
+                case AUDCLNT_E_ENDPOINT_CREATE_FAILED:std::cout<<"The method failed to create the audio endpoint for the render or the capture device. This can occur if the audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+                case AUDCLNT_E_INVALID_DEVICE_PERIOD:std::cout<<"Note  Applies to Windows 7 and later.\
+                Indicates that the device period requested by an exclusive-mode client is greater than 500 milliseconds."<<std::endl;break;
+                case AUDCLNT_E_UNSUPPORTED_FORMAT:std::cout<<"The audio engine (shared mode) or audio endpoint device (exclusive mode) does not support the specified format."<<std::endl;break;
+                case AUDCLNT_E_EXCLUSIVE_MODE_NOT_ALLOWED:std::cout<<"The caller is requesting exclusive-mode use of the endpoint device, but the user has disabled exclusive-mode use of the device."<<std::endl;break;
+                case AUDCLNT_E_BUFDURATION_PERIOD_NOT_EQUAL:std::cout<<"The AUDCLNT_STREAMFLAGS_EVENTCALLBACK flag is set but parameters hnsBufferDuration and hnsPeriodicity are not equal."<<std::endl;break;
+                case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
+                case E_POINTER:std::cout<<"Parameter pFormat is NULL."<<std::endl;break;
+                case E_INVALIDARG:std::cout<<"\
+                Parameter pFormat points to an invalid format description; or the AUDCLNT_STREAMFLAGS_LOOPBACK flag is set but ShareMode is not equal to AUDCLNT_SHAREMODE_SHARED; or the case AUDCLNT_STREAMFLAGS_CROSSPROCESS flag is set but ShareMode is equal to case AUDCLNT_SHAREMODE_EXCLUSIVE.\
+                A prior call to SetClientProperties was made with an invalid category for audio/render streams."<<std::endl;break;
+                case E_OUTOFMEMORY:std::cout<<"Out of memory."<<std::endl;break;
                 default :
                     //unknown
                     break;
@@ -364,7 +373,7 @@ namespace windows_helper{
             CoTaskMemFree(pnearestformat);
 
         mDeviceModeIsExclusive = mode == AUDCLNT_SHAREMODE_EXCLUSIVE;
-		mInitialized = true;
+        mInitialized = true;
         return mInitialized;
     }
     unsigned audio_device::buffer_size(){
@@ -375,13 +384,13 @@ namespace windows_helper{
         if(hr!=S_OK)
         {
 
-			switch(hr)
-			{
-				case AUDCLNT_E_NOT_INITIALIZED:std::cout<<"The audio stream has not been successfully initialized."<<std::endl;break;
-				case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
-				case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
-				case E_POINTER:std::cout<<"Parameter pNumBufferFrames is NULL."<<std::endl;break;
-			}
+            switch(hr)
+            {
+                case AUDCLNT_E_NOT_INITIALIZED:std::cout<<"The audio stream has not been successfully initialized."<<std::endl;break;
+                case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+                case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
+                case E_POINTER:std::cout<<"Parameter pNumBufferFrames is NULL."<<std::endl;break;
+            }
 
         }
         return buffersize;
@@ -455,17 +464,17 @@ void audio_device::internal_process(){
     UINT32 bufferFrameCount=0;
 
     // Get the actual size of the allocated buffer.
-	hr=pAudioClient->GetBufferSize(&bufferFrameCount);
+    hr=pAudioClient->GetBufferSize(&bufferFrameCount);
         if(hr!=S_OK)
         {
 
-			switch(hr)
-			{
-				case AUDCLNT_E_NOT_INITIALIZED:std::cout<<"The audio stream has not been successfully initialized."<<std::endl;break;
-				case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
-				case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
-				case E_POINTER:std::cout<<"Parameter pNumBufferFrames is NULL."<<std::endl;break;
-			}
+            switch(hr)
+            {
+                case AUDCLNT_E_NOT_INITIALIZED:std::cout<<"The audio stream has not been successfully initialized."<<std::endl;break;
+                case AUDCLNT_E_DEVICE_INVALIDATED:std::cout<<"The audio endpoint device has been unplugged, or the audio hardware or associated hardware resources have been reconfigured, disabled, removed, or otherwise made unavailable for use."<<std::endl;break;
+                case AUDCLNT_E_SERVICE_NOT_RUNNING:std::cout<<"The Windows audio service is not running."<<std::endl;break;
+                case E_POINTER:std::cout<<"Parameter pNumBufferFrames is NULL."<<std::endl;break;
+            }
 
         }
     

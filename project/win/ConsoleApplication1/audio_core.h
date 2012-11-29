@@ -99,33 +99,31 @@ typedef std::function<void(audio_buffer&)> audio_callback;
  */
 class audio_device{
 public:
-//    typedef IMMDevice * native_handle_type;
-    class id:std::wstring{
+    class id: public std::wstring{
     public:
-        id():std::wstring(){}
+        id(){}
         id(wchar_t*pwstr):std::wstring(pwstr){}
-        inline bool operator==(const id& rhs){ return compare(rhs)==0;}
-        inline bool operator!=(const id& rhs){ return !operator==(rhs);}
         friend std::wostream& operator<<(std::wostream& out, const audio_device::id& id){
             return out<<id.data();	
         } 
-		const wchar_t* data()const{return std::wstring::data();}
     };
   //  audio_device(native_handle_type handle=nullptr);
-	audio_device(const id& id);
+    audio_device();//default CTOR
+    audio_device(const id& id);
     audio_device(audio_device && d);
     ~audio_device();
    // native_handle_type native_handle() const{return pDeviceHandle;}
     //! reurn the id of the audio device if initialized, or defaut if not
-	const id get_id()const {return mId;}
+    const id get_id()const {return mId;}
     unsigned buffer_size();
     std::chrono::nanoseconds period();
     std::wstring name();
+    bool valid()const{return !mId.empty();}
 
 
     //! to specify a format when you initialize a device
     bool initialize(const audio_format & format);
-	//! defaut initialize
+    //! defaut initialize
     bool initialize();
 
     bool set_callback(const audio_callback & inCallback);
@@ -136,17 +134,17 @@ public:
     bool is_initialized()const {return mInitialized;}
 private:
     void internal_process();
-    audio_device(const audio_device&);
+    audio_device(const audio_device&);//not copyable because we can not copy an audio client
     IMMDevice *pDeviceHandle;
     IAudioClient * pAudioClient;
-	id mId;
+    id mId;
     bool mActive;
     audio_format mFormat;
     audio_callback mCallback;
     std::future<void> mFuture;
     std::atomic_bool mRunProcess;
     HANDLE hEvent;
-	bool mInitialized;
+    bool mInitialized;
     bool mDeviceModeIsExclusive;
 };
 
