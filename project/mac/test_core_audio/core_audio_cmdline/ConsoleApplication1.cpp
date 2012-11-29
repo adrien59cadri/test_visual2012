@@ -38,17 +38,17 @@ int main(int argc, char* argv[])
         auto&& device = collection.at(pos);
         std::cout<<device.name().data()<<std::endl;
         std::wcout<<device.get_id()<<std::endl;
-        if(!device.initialize())
-            std::cout<<"echec initialize()"<<std::endl;
+//        if(!device.initialize())
+ //           std::cout<<"echec initialize()"<<std::endl;
 //
 //        std::wcout<<"buffer size : "<<device.buffer_size()<<" period : "<<device.period().count()<<" ns"<<std::endl;
-        device.set_callback(process);
-        device.start();
+//        device.set_callback(process);
+//        device.start();
 //
 //        
-        std::cout<<"\nthread id "<<std::this_thread::get_id()<<std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(30));
-        device.stop();
+ //       std::cout<<"\nthread id "<<std::this_thread::get_id()<<std::endl;
+ //       std::this_thread::sleep_for(std::chrono::seconds(30));
+//        device.stop();
     }
     return 0;
 }

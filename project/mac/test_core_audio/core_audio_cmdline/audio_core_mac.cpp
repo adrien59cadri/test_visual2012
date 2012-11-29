@@ -48,88 +48,73 @@ audio_device_collection::audio_device_collection(){
     }
 }
 
-audio_device::audio_device(AudioDeviceID id){
-    AudioObjectPropertyScope scope = 0;
-    bool try_another_scope = true;
-    {
-        
-        UInt32 propsize = sizeof(AudioStreamBasicDescription);
-        
-        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
-            kAudioDevicePropertyScopeInput,
-            kAudioDevicePropertyStreamFormat };
-        OSStatus err=AudioObjectGetPropertyData(id,
-                                                &theAddress,
-                                                0,
-                                                NULL,
-                                                &propsize,
-                                                &mFormat);
-        
-        if(err==0){
-            try_another_scope = false;
-            scope = kAudioDevicePropertyScopeInput;
-        }
-        
+
+void mac_utilities::print_osstatus_error(OSStatus error){
+    std::cout<<osstatus_error_msg(error)<<std::endl;
+}
+const char * mac_utilities::osstatus_error_msg(OSStatus error)
+{
+    
+    const char * errorText = nullptr;
+    
+    switch (error) {
+        case kAudioHardwareNoError:
+            return nullptr;
+        case kAudioHardwareNotRunningError:
+            errorText = "Audio Hardware Not Running";
+            break;
+        case kAudioHardwareUnspecifiedError:
+            errorText = "Unspecified Audio Hardware Error";
+            break;
+        case kAudioHardwareUnknownPropertyError:
+            errorText = "Audio Hardware: Unknown Property";
+            break;
+        case kAudioHardwareBadPropertySizeError:
+            errorText = "Audio Hardware: Bad Property Size";
+            break;
+        case kAudioHardwareIllegalOperationError:
+            errorText = "Audio Hardware: Illegal Operation";
+            break;
+        case kAudioHardwareBadDeviceError:
+            errorText = "Audio Hardware: Bad Device";
+            break;
+        case kAudioHardwareBadStreamError:
+            errorText = "Audio Hardware: BadStream";
+            break;
+        case kAudioHardwareUnsupportedOperationError:
+            errorText = "Audio Hardware: Unsupported Operation";
+            break;
+        case kAudioDeviceUnsupportedFormatError:
+            errorText = "Audio Device: Unsupported Format";
+            break;
+        case kAudioDevicePermissionsError:
+            errorText = "Audio Device: Permissions Error";
+            break;
+        default:
+            errorText = "Unknown Error";
     }
-    if(try_another_scope){
-        
-        
-        UInt32 propsize = sizeof(AudioStreamBasicDescription);
-        
-        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
-            kAudioDevicePropertyScopeOutput,
-            kAudioDevicePropertyStreamFormat };
-        OSStatus err=AudioObjectGetPropertyData(id,
-                                                &theAddress,
-                                                0,
-                                                NULL,
-                                                &propsize,
-                                                &mFormat);
-        
-        if(err==0){
-            try_another_scope = false;
-            scope = kAudioDevicePropertyScopeOutput;
-        }
-        
-        
-    }
-    if(try_another_scope){
-        
-        
-        UInt32 propsize = sizeof(AudioStreamBasicDescription);
-        
-        AudioObjectPropertyAddress theAddress = { kAudioDevicePropertySafetyOffset,
-            kAudioDevicePropertyScopePlayThrough,
-            kAudioDevicePropertyStreamFormat };
-        OSStatus err=AudioObjectGetPropertyData(id,
-                                                &theAddress,
-                                                0,
-                                                NULL,
-                                                &propsize,
-                                                &mFormat);
-        
-        if(err==0){
-            try_another_scope = false;
-            scope= kAudioDevicePropertyScopePlayThrough;
-        }
-        
-        
-    }
-    assert(!try_another_scope);
-    mAudioDevice.Init(id,scope);
+    return errorText;
+}
+
+
+
+
+audio_device::audio_device(AudioDeviceID id):mId(id){
+    register_listener_proc();
+
+
         
 }
 audio_device::audio_device(audio_device && d){
-    std::swap(mAudioDevice,d.mAudioDevice);
+    std::swap(mId,d.mId);
 }
 audio_device::~audio_device(){
+    unregister_listener_proc();
     
 }
 //native_handle_type native_handle() const{return pDeviceHandle;}
 //! reurn the id of the audio device if initialized, or defaut if not
-audio_device::id audio_device::get_id(){
-    return mAudioDevice.mID;
-}
+
 //unsigned buffer_size();
 //std::chrono::nanoseconds period();
 

@@ -16,7 +16,12 @@
 #include <array>
 #include <future>
 #include <atomic>
-#include "AudioDevice.h"
+
+
+namespace mac_utilities{
+    void print_osstatus_error(OSStatus error);
+    const char * osstatus_error_msg(OSStatus error);
+}
 
 enum class audio_direction{
     eInput,
@@ -96,25 +101,17 @@ typedef std::function<void(audio_buffer&)> audio_callback;
 class audio_device{
 public:
     typedef AudioDeviceID id;
-//    class id:{
-//    public:
-//        id(AudioDeviceID inId):std::wstring(){}
-//        id(wchar_t*pwstr):std::wstring(pwstr){}
-//        inline bool operator==(const id& rhs){ return compare(rhs)==0;}
-//        inline bool operator!=(const id& rhs){ return !operator==(rhs);}
-//        friend std::wostream& operator<<(std::wostream& out, const audio_device::id& id){
-//            return out<<id.data();
-//        }
-//    };
+
+
     audio_device(AudioDeviceID id);
     audio_device(audio_device && d);
     ~audio_device();
     //native_handle_type native_handle() const{return pDeviceHandle;}
     //! reurn the id of the audio device if initialized, or defaut if not
-    id get_id();
+    id get_id() const{return mId;}
     //unsigned buffer_size();
     //std::chrono::nanoseconds period();
-    bool valid(){return mAudioDevice.Valid();}
+	bool	valid() const { return mId != kAudioDeviceUnknown; }
     std::string name();
     
     
@@ -134,7 +131,6 @@ private:
     audio_device(const audio_device&);
     //native_handle_type pDeviceHandle;
 
-    AudioDevice mAudioDevice;
     bool mActive;
     audio_format mFormat;
     audio_callback mCallback;
@@ -142,6 +138,58 @@ private:
     //std::atomic_bool mRunProcess;
     bool mDeviceModeIsExclusive;
     AudioDeviceIOProcID mIOProcID;
+	AudioDeviceID					mId;
+    
+    //!listener to get changes on the devices
+    
+        void register_listener_proc()
+        {
+            AudioObjectPropertyAddress pa;
+            pa.mSelector = kAudioObjectPropertySelectorWildcard;
+            pa.mScope = kAudioObjectPropertyScopeWildcard;
+            pa.mElement = kAudioObjectPropertyElementWildcard;
+            
+            AudioObjectAddPropertyListener (mId, &pa, deviceListenerProc, this);
+        }
+        
+        void unregister_listener_proc()
+        {
+            AudioObjectPropertyAddress pa;
+            pa.mSelector = kAudioObjectPropertySelectorWildcard;
+            pa.mScope = kAudioObjectPropertyScopeWildcard;
+            pa.mElement = kAudioObjectPropertyElementWildcard;
+            
+            AudioObjectRemovePropertyListener (mId, &pa, deviceListenerProc, this);
+            
+        }
+    void update_infos(){}
+    static OSStatus deviceListenerProc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData)
+    {
+        auto audio_device_ptr = static_cast <audio_device*> (inClientData);
+        
+        switch (pa->mSelector)
+        {
+            case kAudioDevicePropertyBufferSize:
+            case kAudioDevicePropertyBufferFrameSize:
+            case kAudioDevicePropertyNominalSampleRate:
+            case kAudioDevicePropertyStreamFormat:
+            case kAudioDevicePropertyDeviceIsAlive:
+            case kAudioStreamPropertyPhysicalFormat:
+                audio_device_ptr->update_infos();
+                break;
+                
+            case kAudioDevicePropertyBufferSizeRange:
+            case kAudioDevicePropertyVolumeScalar:
+            case kAudioDevicePropertyMute:
+            case kAudioDevicePropertyPlayThru:
+            case kAudioDevicePropertyDataSource:
+            case kAudioDevicePropertyDeviceIsRunning:
+                break;
+        }
+        
+        return noErr;
+    }
+        
 };
 
 

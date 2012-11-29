@@ -11,7 +11,6 @@
 		8BD7EB5116650F2800F98791 /* ConsoleApplication1.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8BD7EB5016650F2800F98791 /* ConsoleApplication1.cpp */; };
 		8BD7EB5916651C1B00F98791 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8BD7EB5716651C1B00F98791 /* CoreAudio.framework */; };
 		8BD7EB5A16651C1B00F98791 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8BD7EB5816651C1B00F98791 /* CoreFoundation.framework */; };
-		8BD7EB70166537A100F98791 /* AudioDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8BD7EB6E166537A100F98791 /* AudioDevice.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -33,8 +32,6 @@
 		8BD7EB5016650F2800F98791 /* ConsoleApplication1.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ConsoleApplication1.cpp; sourceTree = "<group>"; };
 		8BD7EB5716651C1B00F98791 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk/System/Library/Frameworks/CoreAudio.framework; sourceTree = DEVELOPER_DIR; };
 		8BD7EB5816651C1B00F98791 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk/System/Library/Frameworks/CoreFoundation.framework; sourceTree = DEVELOPER_DIR; };
-		8BD7EB6E166537A100F98791 /* AudioDevice.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioDevice.cpp; sourceTree = "<group>"; };
-		8BD7EB6F166537A100F98791 /* AudioDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioDevice.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,8 +68,6 @@
 			isa = PBXGroup;
 			children = (
 				8BD7EB5016650F2800F98791 /* ConsoleApplication1.cpp */,
-				8BD7EB6E166537A100F98791 /* AudioDevice.cpp */,
-				8BD7EB6F166537A100F98791 /* AudioDevice.h */,
 				8BD7EB4D16650EAF00F98791 /* audio_core_mac.cpp */,
 				8BD7EB4E16650EAF00F98791 /* audio_core_mac.h */,
 			);
@@ -140,7 +135,6 @@
 			files = (
 				8BD7EB4F16650EAF00F98791 /* audio_core_mac.cpp in Sources */,
 				8BD7EB5116650F2800F98791 /* ConsoleApplication1.cpp in Sources */,
-				8BD7EB70166537A100F98791 /* AudioDevice.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
