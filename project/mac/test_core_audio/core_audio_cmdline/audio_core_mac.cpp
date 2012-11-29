@@ -101,8 +101,9 @@ const char * mac_utilities::osstatus_error_msg(OSStatus error)
 
 audio_device::audio_device(AudioDeviceID id):mId(id){
     register_listener_proc();
+    init_name();
 
-
+    
         
 }
 audio_device::audio_device(audio_device && d){
@@ -112,13 +113,145 @@ audio_device::~audio_device(){
     unregister_listener_proc();
     
 }
-//native_handle_type native_handle() const{return pDeviceHandle;}
-//! reurn the id of the audio device if initialized, or defaut if not
 
-//unsigned buffer_size();
-//std::chrono::nanoseconds period();
 
-std::string audio_device::name(){
+void  audio_device::register_listener_proc()
+{
+    AudioObjectPropertyAddress pa;
+    pa.mSelector = kAudioObjectPropertySelectorWildcard;
+    pa.mScope = kAudioObjectPropertyScopeWildcard;
+    pa.mElement = kAudioObjectPropertyElementWildcard;
+    
+    AudioObjectAddPropertyListener (mId, &pa, device_listener_proc, this);
+}
+
+void  audio_device::unregister_listener_proc()
+{
+    AudioObjectPropertyAddress pa;
+    pa.mSelector = kAudioObjectPropertySelectorWildcard;
+    pa.mScope = kAudioObjectPropertyScopeWildcard;
+    pa.mElement = kAudioObjectPropertyElementWildcard;
+    
+    AudioObjectRemovePropertyListener (mId, &pa, device_listener_proc, this);
+    
+}
+void audio_device::update_infos(){
+    
+    AudioObjectPropertyAddress pa={0};
+    pa.mSelector = kAudioDevicePropertyDeviceIsAlive;
+    pa.mScope = kAudioObjectPropertyScopeWildcard;
+    pa.mElement = kAudioObjectPropertyElementMaster;
+    
+    UInt32 isAlive;
+    UInt32 size = sizeof (isAlive);
+    OSStatus err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &isAlive);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+    }
+    Float64 sr;
+    size = sizeof (sr);
+    pa.mSelector = kAudioDevicePropertyNominalSampleRate;
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &sr);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+    }
+        
+    UInt32 framesPerBuf;
+    size = sizeof (framesPerBuf);
+    pa.mSelector = kAudioDevicePropertyBufferFrameSize;
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &framesPerBuf);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+    }
+    
+        
+    pa.mSelector = kAudioDevicePropertyBufferFrameSizeRange;
+    err = AudioObjectGetPropertyDataSize (get_id(), &pa, 0, 0, &size);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+    }
+    int framesizes_nb = size/sizeof(AudioValueRange);
+    AudioValueRange* framesizes = new AudioValueRange[framesizes_nb];
+
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &framesizes);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+    }
+
+    pa.mSelector = kAudioDevicePropertyAvailableNominalSampleRates;
+    err = AudioObjectGetPropertyDataSize (get_id(), &pa, 0, 0, &size);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+    }
+    int samplerates_nb = size/sizeof(AudioValueRange);
+    AudioValueRange* samplerates = new AudioValueRange[samplerates_nb];
+    
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &samplerates);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+    }
+    UInt32 inputLatency = 0;
+    size = sizeof (inputLatency);
+    pa.mSelector = kAudioDevicePropertyLatency;
+    pa.mScope = kAudioDevicePropertyScopeInput;
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &inputLatency);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+    }
+        
+    pa.mScope = kAudioDevicePropertyScopeOutput;
+    UInt32 outputLatency = 0;
+    size = sizeof (outputLatency);
+    pa.mSelector = kAudioDevicePropertyLatency;
+    pa.mScope = kAudioDevicePropertyScopeInput;
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &outputLatency);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+    }
+
+
+    //channels info
+    }
+OSStatus audio_device::device_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData)
+{
+    auto audio_device_ptr = static_cast <audio_device*> (inClientData);
+    
+    switch (pa->mSelector)
+    {
+        case kAudioDevicePropertyBufferSize:
+        case kAudioDevicePropertyBufferFrameSize:
+        case kAudioDevicePropertyNominalSampleRate:
+        case kAudioDevicePropertyStreamFormat:
+        case kAudioDevicePropertyDeviceIsAlive:
+        case kAudioStreamPropertyPhysicalFormat:
+            audio_device_ptr->update_infos();
+            break;
+            
+        case kAudioDevicePropertyBufferSizeRange:
+        case kAudioDevicePropertyVolumeScalar:
+        case kAudioDevicePropertyMute:
+        case kAudioDevicePropertyPlayThru:
+        case kAudioDevicePropertyDataSource:
+        case kAudioDevicePropertyDeviceIsRunning:
+            break;
+    }
+    
+    return noErr;
+}
+
+void  audio_device::init_name(){
+    
+    assert(valid());
+        
     OSStatus result = noErr;
 
     CFStringRef theDeviceName;
@@ -142,10 +275,9 @@ std::string audio_device::name(){
         std::cout<<"aie";
         
     }
-    std::string name(charbuffer);
+    mName = std::string(charbuffer);
     delete [] charbuffer;
     CFRelease(theDeviceName);
-    return name;
 }
 
 bool audio_device::initialize(){

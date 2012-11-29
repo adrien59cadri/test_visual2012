@@ -112,7 +112,7 @@ public:
     //unsigned buffer_size();
     //std::chrono::nanoseconds period();
 	bool	valid() const { return mId != kAudioDeviceUnknown; }
-    std::string name();
+    std::string name()const {return mName;}
     
     
 
@@ -130,8 +130,10 @@ private:
                     , const AudioBufferList* inInputData, const AudioTimeStamp* inInputTime, AudioBufferList * outOutData, const AudioTimeStamp * inOutputTime, void * inClientData);
     audio_device(const audio_device&);
     //native_handle_type pDeviceHandle;
-
+    //retrives the name during ctor
+    void init_name();
     bool mActive;
+    std::string mName;
     audio_format mFormat;
     audio_callback mCallback;
     std::future<void> mFuture;
@@ -142,53 +144,11 @@ private:
     
     //!listener to get changes on the devices
     
-        void register_listener_proc()
-        {
-            AudioObjectPropertyAddress pa;
-            pa.mSelector = kAudioObjectPropertySelectorWildcard;
-            pa.mScope = kAudioObjectPropertyScopeWildcard;
-            pa.mElement = kAudioObjectPropertyElementWildcard;
-            
-            AudioObjectAddPropertyListener (mId, &pa, deviceListenerProc, this);
-        }
-        
-        void unregister_listener_proc()
-        {
-            AudioObjectPropertyAddress pa;
-            pa.mSelector = kAudioObjectPropertySelectorWildcard;
-            pa.mScope = kAudioObjectPropertyScopeWildcard;
-            pa.mElement = kAudioObjectPropertyElementWildcard;
-            
-            AudioObjectRemovePropertyListener (mId, &pa, deviceListenerProc, this);
-            
-        }
-    void update_infos(){}
-    static OSStatus deviceListenerProc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData)
-    {
-        auto audio_device_ptr = static_cast <audio_device*> (inClientData);
-        
-        switch (pa->mSelector)
-        {
-            case kAudioDevicePropertyBufferSize:
-            case kAudioDevicePropertyBufferFrameSize:
-            case kAudioDevicePropertyNominalSampleRate:
-            case kAudioDevicePropertyStreamFormat:
-            case kAudioDevicePropertyDeviceIsAlive:
-            case kAudioStreamPropertyPhysicalFormat:
-                audio_device_ptr->update_infos();
-                break;
-                
-            case kAudioDevicePropertyBufferSizeRange:
-            case kAudioDevicePropertyVolumeScalar:
-            case kAudioDevicePropertyMute:
-            case kAudioDevicePropertyPlayThru:
-            case kAudioDevicePropertyDataSource:
-            case kAudioDevicePropertyDeviceIsRunning:
-                break;
-        }
-        
-        return noErr;
-    }
+    void register_listener_proc();
+    
+    void unregister_listener_proc();
+    void update_infos();
+    static OSStatus device_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData);
         
 };
 
