@@ -48,7 +48,101 @@ audio_device_collection::audio_device_collection(){
     }
 }
 
+ //==============================================================================
 
+    bool get_device_name(AudioDeviceID id,char *& buffer, int & size)
+    {
+        AudioObjectPropertyAddress pa;
+        pa.mSelector = kAudioDevicePropertyDeviceName;
+        pa.mScope = kAudioObjectPropertyScopeWildcard;
+        pa.mElement = kAudioObjectPropertyElementMaster;
+        int length = 0;
+        OSStatus err=AudioObjectGetPropertyDataSize (id, &pa, 0, 0, &length);
+        if(err!=noErr)
+        {
+            mac_utilities::print_osstatus_error(err);
+            return false;
+        }
+        size = length +1;//for null terminated
+        buffer = malloc(sizeof(char)*size);
+        err=AudioObjectGetPropertyData (id, &pa, 0, 0, &length, buffer);
+        if(err!=noErr)
+        {
+            mac_utilities::print_osstatus_error(err);
+            return false;
+        }
+        
+
+        return true;
+    }
+
+    void mac_scan_devices()
+    {
+
+        std::vector<std::string> output_devices_names;
+        std::vector<std::string> input_devices_names;
+
+        std::vector<AudioDeviceID> output_devices_ids;
+        std::vector<AudioDeviceID> input_devices_ids;
+
+        AudioObjectPropertyAddress pa;
+        pa.mSelector = kAudioHardwarePropertyDevices;
+        pa.mScope = kAudioObjectPropertyScopeWildcard;
+        pa.mElement = kAudioObjectPropertyElementMaster;
+
+        OSStatus err=AudioObjectGetPropertyDataSize (kAudioObjectSystemObject, &pa, 0, 0, &size);
+        if(err!=noErr)
+        {
+            mac_utilities::print_osstatus_error(err);
+        }
+        
+        int device_nb = size/sizeof(AudioDeviceID);
+        AudioDeviceID * devs = new AudioDeviceID[device_nb];
+
+        err=AudioObjectGetPropertyData (kAudioObjectSystemObject, &pa, 0, 0, &size, devs);
+        if(err!=noErr)
+        {
+            mac_utilities::print_osstatus_error(err);
+        }
+        
+
+        for(int i= 0;i<dev;i++)
+        {
+
+            char * buffer = nullptr;
+            int length=0;
+            bool test = get_device_name(devs[i],buffer, length);
+            if(!test)
+            {
+                //aie
+            }
+            std::string dev_name(buffer, length);
+            free(buffer);
+
+            //get numchannels
+        }
+    }
+
+
+    true get_device_bufferlist (AudioDeviceID deviceID, bool input, AudioBufferList &bufflist)
+    {
+        int total = 0;
+        UInt32 size = sizeof(AudioBufferList);
+
+        AudioObjectPropertyAddress pa;
+        pa.mSelector = kAudioDevicePropertyStreamConfiguration;
+        pa.mScope = input ? kAudioDevicePropertyScopeInput : kAudioDevicePropertyScopeOutput;
+        pa.mElement = kAudioObjectPropertyElementMaster;
+
+
+        OSStatus err= AudioObjectGetPropertyData(deviceID, &pa, 0, 0, &size,&bufflist) ;
+        if(err != noErr)
+        {
+            mac_utilities::print_osstatus_error(err);
+            return false;
+        }
+        return true;
+    }
 void mac_utilities::print_osstatus_error(OSStatus error){
     std::cout<<osstatus_error_msg(error)<<std::endl;
 }
