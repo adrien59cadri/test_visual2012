@@ -192,6 +192,8 @@ audio_device::audio_device(audio_device && d){
     std::swap(mInputBuffersChannelsNb,d.mInputBuffersChannelsNb);
     d.unregister_listener_proc();
     register_listener_proc();
+    
+    update_infos();
 }
 audio_device::~audio_device(){
     unregister_listener_proc();
@@ -207,6 +209,10 @@ void  audio_device::register_listener_proc()
     pa.mElement = kAudioObjectPropertyElementWildcard;
     
     AudioObjectAddPropertyListener (mId, &pa, device_listener_proc, this);
+    
+    
+
+    AudioObjectAddPropertyListener (kAudioObjectSystemObject, &pa, system_listener_proc, this);
 }
 
 void  audio_device::unregister_listener_proc()
@@ -217,10 +223,46 @@ void  audio_device::unregister_listener_proc()
     pa.mElement = kAudioObjectPropertyElementWildcard;
     
     AudioObjectRemovePropertyListener (mId, &pa, device_listener_proc, this);
+    AudioObjectRemovePropertyListener (kAudioObjectSystemObject, &pa, system_listener_proc, this);
+
+
+    
+}
+bool audio_device::set_sample_rate(Float64 sample_rate){
+    AudioObjectPropertyAddress pa={0};
+    pa.mSelector = kAudioDevicePropertyNominalSampleRate;
+    pa.mScope = kAudioObjectPropertyScopeWildcard;
+    pa.mElement = kAudioObjectPropertyElementMaster;
+    
+    Float64 samplerate= sample_rate;
+    UInt32 size = sizeof (samplerate);
+    OSStatus err = AudioObjectSetPropertyData (get_id(), &pa, 0, nullptr, size, &samplerate);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+        return false;
+    }
+    return true;
+}
+bool audio_device::set_buffer_size(UInt32 buffer_size){
+    AudioObjectPropertyAddress pa={0};
+    pa.mSelector = kAudioDevicePropertyBufferFrameSize;
+    pa.mScope = kAudioObjectPropertyScopeWildcard;
+    pa.mElement = kAudioObjectPropertyElementMaster;
+    
+    UInt32 buffersize =buffer_size;
+    UInt32 size = sizeof (buffersize);
+    OSStatus err = AudioObjectSetPropertyData (get_id(), &pa, 0, nullptr, size, &buffersize);
+    if(err != noErr)
+    {
+        mac_utilities::print_osstatus_error(err);
+        return false;
+    }
+    return true;
     
 }
 void audio_device::update_infos(){
-    
+    std::cout<<"device infos "<<name()<<std::endl;
     AudioObjectPropertyAddress pa={0};
     pa.mSelector = kAudioDevicePropertyDeviceIsAlive;
     pa.mScope = kAudioObjectPropertyScopeWildcard;
@@ -228,7 +270,7 @@ void audio_device::update_infos(){
     
     UInt32 isAlive;
     UInt32 size = sizeof (isAlive);
-    OSStatus err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &isAlive);
+    OSStatus err = AudioObjectGetPropertyData (get_id(), &pa, 0, nullptr, &size, &isAlive);
     if(err != noErr)
     {
         mac_utilities::print_osstatus_error(err);
@@ -236,7 +278,7 @@ void audio_device::update_infos(){
     Float64 sr;
     size = sizeof (sr);
     pa.mSelector = kAudioDevicePropertyNominalSampleRate;
-    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &sr);
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, nullptr, &size, &sr);
     if(err != noErr)
     {
         mac_utilities::print_osstatus_error(err);
@@ -245,7 +287,7 @@ void audio_device::update_infos(){
     UInt32 framesPerBuf;
     size = sizeof (framesPerBuf);
     pa.mSelector = kAudioDevicePropertyBufferFrameSize;
-    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &framesPerBuf);
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, nullptr, &size, &framesPerBuf);
     if(err != noErr)
     {
         mac_utilities::print_osstatus_error(err);
@@ -253,40 +295,49 @@ void audio_device::update_infos(){
     
         
     pa.mSelector = kAudioDevicePropertyBufferFrameSizeRange;
-    err = AudioObjectGetPropertyDataSize (get_id(), &pa, 0, 0, &size);
+    err = AudioObjectGetPropertyDataSize (get_id(), &pa, 0, nullptr, &size);
     if(err != noErr)
     {
         mac_utilities::print_osstatus_error(err);
     }
     int framesizes_nb = size/sizeof(AudioValueRange);
-    std::unique_ptr<AudioValueRange> framesizes( new AudioValueRange[framesizes_nb]);
+    std::unique_ptr<AudioValueRange[]> framesizes( new AudioValueRange[framesizes_nb]);
 
-    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, framesizes.get());
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, nullptr, &size, framesizes.get());
     if(err != noErr)
     {
         mac_utilities::print_osstatus_error(err);
     }
+    
+    for (int i=0;i<framesizes_nb;i++) {
+        std::cout<<"frame size : "<<framesizes[i].mMinimum<<" < "<<framesizes[i].mMaximum<<std::endl;
+    }
 
     pa.mSelector = kAudioDevicePropertyAvailableNominalSampleRates;
-    err = AudioObjectGetPropertyDataSize (get_id(), &pa, 0, 0, &size);
+    err = AudioObjectGetPropertyDataSize (get_id(), &pa, 0, nullptr, &size);
     if(err != noErr)
     {
         mac_utilities::print_osstatus_error(err);
     }
     int samplerates_nb = size/sizeof(AudioValueRange);
-    std::unique_ptr<AudioValueRange> samplerates( new AudioValueRange[samplerates_nb]);
+    std::unique_ptr<AudioValueRange[]> samplerates( new AudioValueRange[samplerates_nb]);
 
     
-    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, samplerates.get());
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, nullptr, &size, samplerates.get());
     if(err != noErr)
     {
         mac_utilities::print_osstatus_error(err);
     }
+    for (int i=0;i<samplerates_nb;i++) {
+        std::cout<<"sample rate : "<<samplerates[i].mMinimum<<" < "<<samplerates[i].mMaximum<<std::endl;
+    }
+    /*
+    
     UInt32 inputLatency = 0;
     size = sizeof (inputLatency);
     pa.mSelector = kAudioDevicePropertyLatency;
     pa.mScope = kAudioDevicePropertyScopeInput;
-    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &inputLatency);
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, nullptr, &size, &inputLatency);
     if(err != noErr)
     {
         mac_utilities::print_osstatus_error(err);
@@ -297,15 +348,38 @@ void audio_device::update_infos(){
     size = sizeof (outputLatency);
     pa.mSelector = kAudioDevicePropertyLatency;
     pa.mScope = kAudioDevicePropertyScopeInput;
-    err = AudioObjectGetPropertyData (get_id(), &pa, 0, 0, &size, &outputLatency);
+    err = AudioObjectGetPropertyData (get_id(), &pa, 0, nullptr, &size, &outputLatency);
     if(err != noErr)
     {
         mac_utilities::print_osstatus_error(err);
     }
 
-
+*/
     //channels info
+}
+
+OSStatus audio_device::system_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData)
+{
+
+    auto* const device = static_cast <audio_device*> (inClientData);
+    
+    switch (pa->mSelector)
+    {
+        case kAudioHardwarePropertyDevices:
+            device->update_infos();
+            break;
+            
+        case kAudioHardwarePropertyDefaultOutputDevice:
+        case kAudioHardwarePropertyDefaultInputDevice:
+        case kAudioHardwarePropertyDefaultSystemOutputDevice:
+            std::cout<<"ignored system audio object callback"<<std::endl;
+            break;
     }
+    
+    return noErr;
+
+}
+
 OSStatus audio_device::device_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData)
 {
     auto audio_device_ptr = static_cast <audio_device*> (inClientData);
@@ -391,64 +465,17 @@ bool audio_device::initialize(){
     stereoStreamFormat.mBytesPerPacket    = stereoStreamFormat.mFramesPerPacket*stereoStreamFormat.mBytesPerFrame ;
     stereoStreamFormat.mSampleRate        = 48000.;
     
+    if(set_sample_rate(44100.) && set_buffer_size(512))
+        return true;
+    return false;
     
-    AudioObjectPropertyAddress theAddress = { kAudioDevicePropertyStreams,
-        kAudioDevicePropertyScopeInput,
-        kAudioObjectPropertyElementMaster };
-    
-    // StreamListenerBlock is called whenever the sample rate changes (as well as other format characteristics of the device)
-	UInt32 propSize;
-	OSStatus err = AudioObjectGetPropertyDataSize(get_id(), &theAddress, 0, NULL, &propSize);
-    if (err) fprintf(stderr, "Error %ld returned from AudioObjectGetPropertyDataSize\n", (long)err);
-    
-	if(!err) {
-        
-		AudioStreamID *streams = (AudioStreamID*)malloc(propSize);
-		err = AudioObjectGetPropertyData(get_id(), &theAddress, 0, NULL, &propSize, streams);
-        if (err) fprintf(stderr, "Error %ld returned from AudioObjectGetPropertyData\n", (long)err);
-        
-		if(!err) {
-			UInt32 numStreams = propSize / sizeof(AudioStreamID);
-			
-            for(UInt32 i=0; i < numStreams; i++) {
-				UInt32 isInput;
-				propSize = sizeof(UInt32);
-                theAddress.mSelector = kAudioStreamPropertyDirection;
-                theAddress.mScope = kAudioObjectPropertyScopeGlobal;
-				
-                err = AudioObjectGetPropertyData(streams[i], &theAddress, 0, NULL, &propSize, &isInput);
-                if (err) fprintf(stderr, "Error %ld returned from AudioObjectGetPropertyData\n", (long)err);
-                
-                std::cout<<"is input "<<isInput<<std::endl;
-                
-                
-                AudioStreamRangedDescription * formats = nullptr;
-                
-                theAddress.mSelector= kAudioStreamPropertyAvailablePhysicalFormats;
-                err = AudioObjectGetPropertyDataSize(streams[i],&theAddress,0,nullptr,&propSize);
-                if (err) fprintf(stderr, "Error %ld returned from AudioObjectGetPropertyDataSize\n", (long)err);
-                
-                int nbformats = propSize/sizeof(AudioStreamRangedDescription);
-                formats = new AudioStreamRangedDescription[nbformats];
-                err = AudioObjectGetPropertyData(streams[i], &theAddress, 0, NULL, &propSize, streams);
-                if (err) fprintf(stderr, "Error %ld returned from AudioObjectGetPropertyData\n", (long)err);
-                
-                for(int j=0;j<nbformats;j++){
-                    formats[j].mFormat;
-                }
-                
-                delete [] formats;
-            }
-        }
-        
-        if (NULL != streams) free(streams);
-    }
 }
 
 bool audio_device::set_callback(const audio_callback & inCallback){
     mCallback = inCallback;
     
     OSStatus theError = AudioDeviceCreateIOProcID(get_id(), audio_device::ioproc, this, &mIOProcID);
+    return theError!= noErr;
 }
 
 OSStatus audio_device::ioproc(AudioDeviceID inDevice, const AudioTimeStamp * inNow

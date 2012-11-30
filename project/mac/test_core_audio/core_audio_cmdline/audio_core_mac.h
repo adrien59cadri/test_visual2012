@@ -153,10 +153,12 @@ private:
     //!listener to get changes on the devices
     
     void register_listener_proc();
-    
+    bool set_sample_rate(Float64 samplerate);
+    bool set_buffer_size(UInt32 buffer_size);
     void unregister_listener_proc();
     void update_infos();
     static OSStatus device_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData);
+    static OSStatus system_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData);
     std::vector<UInt32> mInputBuffersChannelsNb,mOutputBuffersChannelsNb;
         
 };
