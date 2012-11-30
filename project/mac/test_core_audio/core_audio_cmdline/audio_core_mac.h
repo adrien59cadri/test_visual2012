@@ -26,6 +26,7 @@ namespace mac_utilities{
                       std::vector<AudioDeviceID>& devices_ids);
     bool get_device_bufferlist (AudioDeviceID deviceID, AudioObjectPropertyScope scope, AudioBufferList &bufflist);
     bool fill_channels_nb_vector(AudioDeviceID deviceID,std::vector<UInt32> & bufferchannelsnb,AudioObjectPropertyScope scope);
+    bool fill_streams_vector(AudioDeviceID id,std::vector<AudioStreamID> & streams_,AudioObjectPropertyScope scope);
 
 }
 
@@ -162,9 +163,11 @@ private:
     static OSStatus device_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData);
     static OSStatus system_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData);
     std::vector<UInt32> mInputBuffersChannelsNb,mOutputBuffersChannelsNb;
-    
+    bool set_stream_format(AudioStreamID sid, AudioStreamBasicDescription & descr, AudioObjectPropertyScope scope);
+
     Float64 mCurrentSampleRate;
     UInt32 mCurrentBufferSize;
+    std::vector<AudioStreamID> mOutputStreams,mInputStreams;
 
 };
 
