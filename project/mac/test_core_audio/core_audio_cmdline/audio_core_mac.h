@@ -129,8 +129,8 @@ public:
     
     bool set_callback(const audio_callback & inCallback);
     
-    void start();
-    void stop();
+    bool start();
+    bool stop();
     
     //bool is_initialized()const {return pDeviceHandle!=nullptr ;}
 private:
@@ -155,12 +155,17 @@ private:
     void register_listener_proc();
     bool set_sample_rate(Float64 samplerate);
     bool set_buffer_size(UInt32 buffer_size);
+    bool get_sample_rate(Float64& samplerate);
+    bool get_buffer_size(UInt32 &buffer_size);
     void unregister_listener_proc();
     void update_infos();
     static OSStatus device_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData);
     static OSStatus system_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData);
     std::vector<UInt32> mInputBuffersChannelsNb,mOutputBuffersChannelsNb;
-        
+    
+    Float64 mCurrentSampleRate;
+    UInt32 mCurrentBufferSize;
+
 };
 
 

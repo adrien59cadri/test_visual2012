@@ -14,7 +14,7 @@ void process(audio_buffer &buff){
     const float quinte = 3./2.;
     for(int i=0;i<buff.mSize;i++){
         const float res = sinf(phase);
-        t[i*2] = t[i*2+1] = res*.2;//interleaved
+        t[i*2] = t[i*2+1] = res;//interleaved
         phase+=M_2_PI*f;
         while(phase > M_2_PI)
             phase-=M_2_PI;
@@ -43,12 +43,10 @@ int main(int argc, char* argv[])
                    std::cout<<"echec initialize()"<<std::endl;
 //                std::wcout<<"buffer size : "<<device.buffer_size()<<" period : "<<device.sample_rate().count()<<" ns"<<std::endl;
                 device.set_callback(process);
-//        //        device.start();
-//        //
-//        //
-//        //       std::cout<<"\nthread id "<<std::this_thread::get_id()<<std::endl;
-//        //       std::this_thread::sleep_for(std::chrono::seconds(30));
-//        //        device.stop();
+                device.start();
+                std::cout<<"\nthread id "<<std::this_thread::get_id()<<std::endl;
+                std::this_thread::sleep_for(std::chrono::seconds(30));
+                device.stop();
     }
     return 0;
 }
