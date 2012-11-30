@@ -21,10 +21,17 @@
 namespace mac_utilities{
     void print_osstatus_error(OSStatus error);
     const char * osstatus_error_msg(OSStatus error);
+    std::string get_device_name(AudioDeviceID id);
+    bool scan_devices(std::vector<std::string>& devices_names,
+                      std::vector<AudioDeviceID>& devices_ids);
+    bool get_device_bufferlist (AudioDeviceID deviceID, AudioObjectPropertyScope scope, AudioBufferList &bufflist);
+    bool fill_channels_nb_vector(AudioDeviceID deviceID,std::vector<UInt32> & bufferchannelsnb,AudioObjectPropertyScope scope);
+
 }
 
 enum class audio_direction{
     eInput,
+    eAll,
     eOutput
 };
 
@@ -100,6 +107,7 @@ typedef std::function<void(audio_buffer&)> audio_callback;
  */
 class audio_device{
 public:
+    
     typedef AudioDeviceID id;
 
 
@@ -149,6 +157,7 @@ private:
     void unregister_listener_proc();
     void update_infos();
     static OSStatus device_listener_proc (AudioDeviceID /*inDevice*/, UInt32 /*inLine*/, const AudioObjectPropertyAddress* pa, void* inClientData);
+    std::vector<UInt32> mInputBuffersChannelsNb,mOutputBuffersChannelsNb;
         
 };
 
@@ -163,7 +172,8 @@ public:
     audio_device_collection();
 private:
     //see http://msdn.microsoft.com/en-us/library/windows/desktop/ms680582%28v=vs.85%29.aspx
-    void scan();
     bool mInitialized;
+    
+    
     
 };
