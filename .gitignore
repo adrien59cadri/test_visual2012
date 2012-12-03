@@ -13,3 +13,5 @@
 *.vlstatus
 *.unsuccessfulbuild
 *.xcuserstate
+*.xcworkspace
+xcuserdata/
