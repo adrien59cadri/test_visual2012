@@ -491,7 +491,9 @@ bool audio_device::initialize(){
     stereoStreamFormat.mBytesPerPacket    = stereoStreamFormat.mFramesPerPacket*stereoStreamFormat.mBytesPerFrame ;
     stereoStreamFormat.mSampleRate        = 48000.;
     
-    if(set_sample_rate(44100.) && set_buffer_size(512))
+    mFormat.mSampleRate = 48000.;
+    
+    if(set_sample_rate(mFormat.mSampleRate) && set_buffer_size(512))
     {
         update_infos();
         return true;

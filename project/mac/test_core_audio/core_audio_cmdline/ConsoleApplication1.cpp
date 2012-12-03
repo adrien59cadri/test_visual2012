@@ -34,7 +34,8 @@ int main(int argc, char* argv[])
         std::cout<<"name "<<it->name().data()<<std::endl;
         std::wcout<<" id "<<it->get_id()<<std::endl;
     }
-    std::cin>>pos;
+
+    pos = 1;
     {
         auto&& device = collection.at(pos);
         std::cout<<device.name().data()<<std::endl;
