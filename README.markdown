@@ -2,7 +2,14 @@
 
 ##intro
 This small project aims to be a very simple way to use audio devices on Mac OSX(using Core Audio), Winows (using  WASAPI) and linux (ALSA).
-I don't want to support other APIs like DirectX or OSS because I just want to tale the best of each system for low latency audio. I don't want to be compatible with libraries like ASIO, PortAudio, JACK (...) because this would be oo much work, and obviously those systems are based on operating system's APIs and the latency would not be better.
+I don't want to support other APIs like DirectX or OSS because I just want to have (for now) the best of each system for low latency audio.
+I don't want to be compatible with libraries like PortAudio, JACK (...) because this would be too much work, and obviously those systems are based on operating system's APIs and the latency would not be better.
+Finally there is the ASIO problem on windows, in the old time Steinberg company designed a proprietary SDK, for professional audio device constructors so everyone could implement a low latency driver compatible with this ASIO format.
+For this reason ASIO is the doing the same job than WASAPI, however a lot of audio device maker are better and sometime only compatible with ASIO and not WASAPI.
+Therefore, targeting professioal audio (who uses low latency) means implementing ASIO, and so I will see if I can do it.
+
+###Important notice
+Any help from people willing to code, port, review, test is welcome.
 
 ##motivation
 There is currently no easy way to connect to an audio driver in the standard library, and most of other solutions are frameworks doing much more than audio devices (like JUCE or Qt and JACK) or proprietary (ASIO) or not really C++ oriented (PortAudio).
@@ -47,14 +54,21 @@ Other ideas that I will not implement now are :
 	
 	{
 	auto devices = audio_system::get_all_devices(audio_direction::ouput);
+	
+	//here I use litterals, my compiler does not support it yet but I would like to have this feature
+	//as B Stroustrup suggested I think that this would be more clear and unit safe if implemented well
 	audio_format format;
 	format.sample_rate = "44100."Hz;
 	format.buffer_length = "10"ms;
 	format.sample_format = audio_sample_type::float_32;
 	format.bit_order = bit_order::little;
-	for(device : devices){
-		if(!device.initialize(format))
-			format = device.current_format();
-		device.register_callback(my_callback);
-		device.start();
-	}
+	
+	//select a device, here i use x, it could be a name, an int or default
+		
+	//auto device = devices[x]; or ..
+	auto device = audio_system::get_default_device(audio_direction::output);
+	
+	if(!device.initialize(format))
+		format = device.current_format();
+	device.register_callback(my_callback);
+	device.start();
